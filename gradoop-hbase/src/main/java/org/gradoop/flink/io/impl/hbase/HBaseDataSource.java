@@ -28,9 +28,7 @@ import org.gradoop.common.model.impl.pojo.Vertex;
 import org.gradoop.common.storage.impl.hbase.HBaseEPGMStore;
 import org.gradoop.flink.io.api.DataSource;
 import org.gradoop.flink.io.api.FilterableDataSource;
-import org.gradoop.flink.io.filter.Expression;
-import org.gradoop.flink.io.filter.EdgeIdIn;
-import org.gradoop.flink.io.filter.VertexIdIn;
+import org.gradoop.flink.io.filter.*;
 import org.gradoop.flink.io.impl.hbase.inputformats.EdgeTableInputFormat;
 import org.gradoop.flink.io.impl.hbase.inputformats.GraphHeadTableInputFormat;
 import org.gradoop.flink.io.impl.hbase.inputformats.VertexTableInputFormat;
@@ -40,6 +38,7 @@ import org.gradoop.flink.model.impl.functions.tuple.ValueOf1;
 import org.gradoop.flink.model.impl.operators.combination.ReduceCombination;
 import org.gradoop.flink.util.GradoopFlinkConfig;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -99,35 +98,34 @@ public class HBaseDataSource extends HBaseBase<GraphHead, Vertex, Edge>
     TypeInformation<Tuple1<Edge>> edgeTypeInfo = new TupleTypeInfo<>(
       TypeExtractor.createTypeInfo(config.getEdgeFactory().getType()));
 
+    List<EdgeFilter> edgeFilters = new ArrayList<>();
+    List<VertexFilter> vertexFilters = new ArrayList<>();
+
+    if (this.predicates != null) {
+      for (Expression e : this.predicates) {
+        if (e instanceof EdgeFilter) {
+          edgeFilters.add((EdgeFilter) e);
+          if (e instanceof VertexFilter) {
+            vertexFilters.add((VertexFilter) e);
+          }
+        } else if (e instanceof VertexFilter) {
+          vertexFilters.add((VertexFilter) e);
+        } else {
+          throw new RuntimeException("Class '" + e.getClass().getName() +
+              "' is not a valid predicate for pushing down to the HBase data source.");
+        }
+      }
+    }
 
     DataSet<Tuple1<GraphHead>> graphHeads = config.getExecutionEnvironment()
       .createInput(new GraphHeadTableInputFormat<>(config.getGraphHeadHandler(),
         store.getGraphHeadName()), graphTypeInfo);
 
     VertexTableInputFormat vertexTableInputFormat =
-      new VertexTableInputFormat<>(config.getVertexHandler(), store.getVertexTableName());
+      new VertexTableInputFormat<>(config.getVertexHandler(), store.getVertexTableName(), vertexFilters);
 
     EdgeTableInputFormat edgeTableInputFormat =
-      new EdgeTableInputFormat<>(config.getEdgeHandler(), store.getEdgeTableName());
-
-    if (predicates != null) {
-      GradoopIdSet filterEdgeIds;
-      GradoopIdSet filterVertexIds;
-      for (Expression predicate : predicates) {
-        if (predicate instanceof EdgeIdIn) {
-          filterEdgeIds = ((EdgeIdIn) predicate).getFilterIds();
-          vertexTableInputFormat.setFilterEdgeIds(filterEdgeIds);
-          edgeTableInputFormat.setFilterEdgeIds(filterEdgeIds);
-        } else if (predicate instanceof VertexIdIn) {
-          filterVertexIds = ((VertexIdIn) predicate).getFilterIds();
-          vertexTableInputFormat.setFilterVertexIds(filterVertexIds);
-          edgeTableInputFormat.setFilterVertexIds(filterVertexIds);
-        } else {
-          throw new RuntimeException("Class '" + predicate.getClass().getName() +
-              "' is not a valid predicate for pushing down to the HBase data source.");
-        }
-      }
-    }
+      new EdgeTableInputFormat<>(config.getEdgeHandler(), store.getEdgeTableName(), edgeFilters);
 
     DataSet<Tuple1<Vertex>> vertices = config.getExecutionEnvironment()
       .createInput(vertexTableInputFormat, vertexTypeInfo);

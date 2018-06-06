@@ -15,10 +15,16 @@
  */
 package org.gradoop.flink.io.filter;
 
+import org.gradoop.common.model.impl.pojo.GraphElement;
+
+import java.io.Serializable;
+
 /**
  * Abstract class as parent of all expressions for the predicate-pushdown
  * feature of a DataSource.
  */
-public abstract class Expression {
+public interface Expression<T extends GraphElement> extends Serializable {
+
+
 
 }

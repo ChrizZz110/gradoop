@@ -15,35 +15,43 @@
  */
 package org.gradoop.flink.io.filter;
 
+import org.apache.hadoop.hbase.filter.*;
+import org.gradoop.common.model.impl.id.GradoopId;
 import org.gradoop.common.model.impl.id.GradoopIdSet;
 
 /**
- * Expression class for predicate push-down to define a set of vertex ids.
+ * Expression class for predicate push-down to define a set of edge ids.
  * An object of this class can be added to a list which can be applied to
  * a FilterableDataSource instance.
  */
-public class VertexIdIn extends Expression {
+public class GradoopIdIn implements EdgeFilter, VertexFilter {
 
   /**
    * A set of edge ids to filter
    */
-  private GradoopIdSet filterVertexIds;
+  private GradoopIdSet gradoopIds;
 
   /**
-   * Creates a new IN-Expression for vertex-ids
+   * Creates a new IN-Expression for edge-ids
    *
-   * @param filterVertexIds a GradoopIdSet of vertex-ids to filter
+   * @param gradoopIds a GradoopIdSet of edge-ids to filter
    */
-  public VertexIdIn(GradoopIdSet filterVertexIds) {
-    this.filterVertexIds = filterVertexIds;
+  public GradoopIdIn(GradoopIdSet gradoopIds) {
+    this.gradoopIds = gradoopIds;
+
   }
 
-  /**
-   * Returns the list of edge-ids
-   *
-   * @return a GradoopIdSet
-   */
-  public GradoopIdSet getFilterIds() {
-    return filterVertexIds;
+  @Override
+  public Filter getHBaseFilter() {
+    FilterList filterList = new FilterList(FilterList.Operator.MUST_PASS_ONE);
+    RowFilter rowFilter;
+    for (GradoopId gradoopId : this.gradoopIds) {
+      rowFilter = new RowFilter(
+          CompareFilter.CompareOp.EQUAL,
+          new BinaryComparator(gradoopId.toByteArray())
+      );
+      filterList.addFilter(rowFilter);
+    }
+    return filterList;
   }
 }
