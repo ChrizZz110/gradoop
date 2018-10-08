@@ -20,7 +20,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.flink.api.common.ProgramDescription;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.gradoop.benchmark.cypher.Predicates;
 import org.gradoop.examples.AbstractRunner;
 import org.gradoop.flink.io.api.DataSink;
 import org.gradoop.flink.io.api.DataSource;
@@ -34,11 +33,9 @@ import org.gradoop.storage.common.predicate.query.Query;
 import org.gradoop.storage.config.GradoopAccumuloConfig;
 import org.gradoop.storage.config.GradoopHBaseConfig;
 import org.gradoop.storage.impl.accumulo.AccumuloEPGMStore;
-import org.gradoop.storage.impl.accumulo.io.AccumuloDataSink;
 import org.gradoop.storage.impl.accumulo.io.AccumuloDataSource;
 import org.gradoop.storage.impl.hbase.HBaseEPGMStore;
 import org.gradoop.storage.impl.hbase.factory.HBaseEPGMStoreFactory;
-import org.gradoop.storage.impl.hbase.io.HBaseDataSink;
 import org.gradoop.storage.impl.hbase.io.HBaseDataSource;
 import org.gradoop.storage.utils.AccumuloFilters;
 import org.gradoop.storage.utils.HBaseFilters;
@@ -83,7 +80,7 @@ public class SubgraphBenchmark extends AbstractRunner implements ProgramDescript
   /**
    * Option to declare using predicate pushdown for store input.
    */
-  private static final String OPTION_USE_PREDICATE_PUSHDOWN = "p";
+  private static final String OPTION_USE_PREDICATE_PUSHDOWN = "r";
   /**
    * Used input path
    */
@@ -139,7 +136,9 @@ public class SubgraphBenchmark extends AbstractRunner implements ProgramDescript
   /**
    * Main program to run the benchmark. Arguments are the available options.
    *
-   * @param args program arguments
+   * @param args program arguments, e.g.:
+   *             -i hdfs:///mygraph -f indexed -o hdfs:///output -c /home/user/result.csv -v
+   *             -vl person -el knows
    * @throws Exception in case of Error
    */
   public static void main(String[] args) throws Exception {
@@ -159,13 +158,15 @@ public class SubgraphBenchmark extends AbstractRunner implements ProgramDescript
     ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
     GradoopFlinkConfig conf = GradoopFlinkConfig.createConfig(env);
 
+    // Create sink
+    DataSink sink = new CSVDataSink(OUTPUT_PATH, conf);
+
     // read graph
     DataSource source;
-    DataSink sink;
+
     switch (INPUT_FORMAT) {
     case "indexed":
       source = new IndexedCSVDataSource(INPUT_PATH, conf);
-      sink = new CSVDataSink(INPUT_PATH, conf);
       break;
     case "hbase":
       HBaseEPGMStore hBaseEPGMStore = HBaseEPGMStoreFactory.createOrOpenEPGMStore(
@@ -173,7 +174,6 @@ public class SubgraphBenchmark extends AbstractRunner implements ProgramDescript
         GradoopHBaseConfig.getDefaultConfig(),
         INPUT_PATH + ".");
       source = new HBaseDataSource(hBaseEPGMStore, conf);
-      sink = new HBaseDataSink(hBaseEPGMStore, conf);
       // Apply predicate
       if (USE_PREDICATE_PUSHDOWN) {
         source = ((HBaseDataSource) source).applyVertexPredicate(Query.elements().fromAll()
@@ -186,7 +186,6 @@ public class SubgraphBenchmark extends AbstractRunner implements ProgramDescript
       AccumuloEPGMStore accumuloEPGMStore =
         new AccumuloEPGMStore(GradoopAccumuloConfig.getDefaultConfig());
       source = new AccumuloDataSource(accumuloEPGMStore, conf);
-      sink = new AccumuloDataSink(accumuloEPGMStore, conf);
       // Apply predicate
       if (USE_PREDICATE_PUSHDOWN) {
         source = ((AccumuloDataSource) source).applyVertexPredicate(Query.elements().fromAll()
