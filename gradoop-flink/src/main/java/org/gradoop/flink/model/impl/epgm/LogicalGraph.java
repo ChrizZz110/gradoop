@@ -22,7 +22,6 @@ import org.gradoop.common.model.impl.pojo.Edge;
 import org.gradoop.common.model.impl.pojo.GraphHead;
 import org.gradoop.common.model.impl.pojo.Vertex;
 import org.gradoop.flink.io.api.DataSink;
-import org.gradoop.flink.io.impl.gdl.GDLConsoleOutput;
 import org.gradoop.flink.model.api.epgm.BaseGraph;
 import org.gradoop.flink.model.api.epgm.BaseGraphCollectionFactory;
 import org.gradoop.flink.model.api.epgm.BaseGraphFactory;
@@ -631,14 +630,5 @@ public class LogicalGraph
   @Override
   public void writeTo(DataSink dataSink, boolean overWrite) throws IOException {
     dataSink.write(this, overWrite);
-  }
-
-  /**
-   * Prints the GDL formatted graph to the standard output.
-   *
-   * @throws Exception forwarded from dataset print
-   */
-  public void print() throws Exception {
-    GDLConsoleOutput.print(this);
   }
 }
