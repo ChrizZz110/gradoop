@@ -557,7 +557,8 @@ public class LogicalGraph
    * {@inheritDoc}
    */
   @Override
-  public GraphCollection callForCollection(UnaryBaseGraphToBaseCollectionOperator<LogicalGraph, GraphCollection> operator) {
+  public GraphCollection callForCollection(
+    UnaryBaseGraphToBaseCollectionOperator<LogicalGraph, GraphCollection> operator) {
     return operator.execute(this);
   }
 
