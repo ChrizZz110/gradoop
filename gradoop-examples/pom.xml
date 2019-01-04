@@ -153,11 +153,6 @@
             <artifactId>gradoop-hbase</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>org.gradoop</groupId>
-            <artifactId>gradoop-accumulo</artifactId>
-        </dependency>
-
         <!-- Flink -->
         <dependency>
             <groupId>org.apache.flink</groupId>

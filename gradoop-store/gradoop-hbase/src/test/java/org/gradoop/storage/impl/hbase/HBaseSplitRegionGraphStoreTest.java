@@ -34,8 +34,8 @@ public class HBaseSplitRegionGraphStoreTest extends HBaseDefaultGraphStoreTest {
    */
   @BeforeClass
   public static void setUp() throws IOException {
-    final GradoopHBaseConfig config = GradoopHBaseConfig.getDefaultConfig();
-    config.enablePreSplitRegions(32);
+    final GradoopHBaseConfig config = GradoopHBaseConfig.getDefaultConfig()
+      .enablePreSplitRegions(32);
     socialNetworkStore = openEPGMStore("HBaseGraphStoreSplitRegionTest.", config);
     writeSocialGraphToStore(socialNetworkStore);
   }

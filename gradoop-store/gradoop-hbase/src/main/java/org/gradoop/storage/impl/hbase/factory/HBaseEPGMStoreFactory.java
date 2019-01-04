@@ -45,13 +45,12 @@ public class HBaseEPGMStoreFactory {
   }
 
   /**
-   * Creates a graph store or opens an existing one based on the given
-   * parameters. If something goes wrong, {@code null} is returned.
+   * Creates a graph store or opens an existing one based on the given parameters.
    *
    * @param config        Hadoop cluster configuration
    * @param gradoopHBaseConfig Gradoop configuration
    * @param prefix        prefix for HBase table name
-   * @return a graph store instance or {@code null in the case of errors}
+   * @return a graph store instance
    */
   public static HBaseEPGMStore createOrOpenEPGMStore(
     final Configuration config,
@@ -70,12 +69,12 @@ public class HBaseEPGMStoreFactory {
 
   /**
    * Creates a graph store or opens an existing one based on the given
-   * parameters. If something goes wrong, {@code null} is returned.
+   * parameters.
    *
    * @param config              Hadoop cluster configuration
    * @param gradoopHBaseConfig  Gradoop HBase configuration
    *
-   * @return EPGM store instance or {@code null in the case of errors}
+   * @return EPGM store instance
    */
   public static HBaseEPGMStore createOrOpenEPGMStore(
     final Configuration config,
@@ -106,8 +105,7 @@ public class HBaseEPGMStoreFactory {
         connection.getAdmin()
       );
     } catch (IOException e) {
-      e.printStackTrace();
-      return null;
+      throw new RuntimeException("Failure while creating the HBase store.", e);
     }
   }
 

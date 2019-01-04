@@ -16,7 +16,6 @@
 package org.gradoop.storage.impl.hbase.io;
 
 import com.google.common.collect.Lists;
-import org.apache.commons.lang.NotImplementedException;
 import org.apache.flink.api.java.io.LocalCollectionOutputFormat;
 import org.gradoop.common.GradoopTestUtils;
 import org.gradoop.common.model.api.entities.EPGMIdentifiable;
@@ -83,13 +82,13 @@ public class HBaseDataSinkSourceTest extends GradoopFlinkTestBase {
     epgmStores[0] = openEPGMStore("HBaseDataSinkSourceTest.");
     writeSocialGraphToStore(epgmStores[0]);
 
-    final GradoopHBaseConfig splitConfig = GradoopHBaseConfig.getDefaultConfig();
-    splitConfig.enablePreSplitRegions(32);
+    final GradoopHBaseConfig splitConfig = GradoopHBaseConfig.getDefaultConfig()
+      .enablePreSplitRegions(32);
     epgmStores[1] = openEPGMStore("HBaseDataSinkSourceSplitRegionTest.", splitConfig);
     writeSocialGraphToStore(epgmStores[1]);
 
-    final GradoopHBaseConfig spreadingConfig = GradoopHBaseConfig.getDefaultConfig();
-    spreadingConfig.useSpreadingByte(32);
+    final GradoopHBaseConfig spreadingConfig = GradoopHBaseConfig.getDefaultConfig()
+      .useSpreadingByte(32);
     epgmStores[2] = openEPGMStore("HBaseDataSinkSourceSpreadingByteTest.", spreadingConfig);
     writeSocialGraphToStore(epgmStores[2]);
   }
@@ -719,13 +718,13 @@ public class HBaseDataSinkSourceTest extends GradoopFlinkTestBase {
 
     switch (storeIndex) {
     case 1:
-      final GradoopHBaseConfig splitConfig = GradoopHBaseConfig.getDefaultConfig();
-      splitConfig.enablePreSplitRegions(32);
+      final GradoopHBaseConfig splitConfig = GradoopHBaseConfig.getDefaultConfig()
+        .enablePreSplitRegions(32);
       newStore = openEPGMStore("HBaseDataSinkSplitRegionTest" + storeIndex + ".", splitConfig);
       break;
     case 2:
-      final GradoopHBaseConfig spreadingConfig = GradoopHBaseConfig.getDefaultConfig();
-      spreadingConfig.useSpreadingByte(32);
+      final GradoopHBaseConfig spreadingConfig = GradoopHBaseConfig.getDefaultConfig()
+        .useSpreadingByte(32);
       newStore = openEPGMStore("HBaseDataSinkSpreadingTest" + storeIndex + ".", spreadingConfig);
       break;
     default:
@@ -780,7 +779,7 @@ public class HBaseDataSinkSourceTest extends GradoopFlinkTestBase {
   /**
    * Test writing a graph to {@link HBaseDataSink} with overwrite flag, that results in an exception
    */
-  @Test(expected = NotImplementedException.class)
+  @Test(expected = UnsupportedOperationException.class)
   public void testWriteToSinkWithOverWrite() throws Exception {
     // Create an empty store
     HBaseEPGMStore newStore = createEmptyEPGMStore("testWriteToSink");

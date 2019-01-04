@@ -15,7 +15,6 @@
  */
 package org.gradoop.storage.config;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hbase.TableName;
 import org.gradoop.common.model.impl.pojo.EdgeFactory;
 import org.gradoop.common.model.impl.pojo.GraphHeadFactory;
@@ -31,8 +30,9 @@ import org.gradoop.storage.impl.hbase.handler.HBaseVertexHandler;
 import org.gradoop.storage.utils.RegionSplitter;
 import org.gradoop.storage.utils.RowKeyDistributor;
 
+import java.util.Objects;
+
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Configuration class for using HBase with Gradoop.
@@ -92,20 +92,20 @@ public class GradoopHBaseConfig implements GradoopStoreConfig {
     String vertexTableName,
     String edgeTableName
   ) {
-    checkArgument(!StringUtils.isEmpty(graphTableName),
-      "Graph table name was null or empty");
-    checkArgument(!StringUtils.isEmpty(vertexTableName),
-      "EPGMVertex table name was null or empty");
-    checkArgument(!StringUtils.isEmpty(edgeTableName),
-      "EPGMEdge table name was null or empty");
+    checkArgument(graphTableName != null && !graphTableName.isEmpty(),
+      "Graph table name is null or empty.");
+    checkArgument(vertexTableName != null && !vertexTableName.isEmpty(),
+      "Vertex table name is null or empty.");
+    checkArgument(edgeTableName != null && !edgeTableName.isEmpty(),
+      "Edge table name is null or empty.");
 
     this.graphTableName = graphTableName;
     this.vertexTableName = vertexTableName;
     this.edgeTableName = edgeTableName;
 
-    this.graphHeadHandler = checkNotNull(graphHeadHandler, "GraphHeadHandler was null");
-    this.vertexHandler = checkNotNull(vertexHandler, "VertexHandler was null");
-    this.edgeHandler = checkNotNull(edgeHandler, "EdgeHandler was null");
+    this.graphHeadHandler = Objects.requireNonNull(graphHeadHandler, "GraphHeadHandler was null");
+    this.vertexHandler = Objects.requireNonNull(vertexHandler, "VertexHandler was null");
+    this.edgeHandler = Objects.requireNonNull(edgeHandler, "EdgeHandler was null");
   }
 
   /**

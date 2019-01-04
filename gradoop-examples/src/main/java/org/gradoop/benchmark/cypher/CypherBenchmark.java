@@ -28,7 +28,6 @@ import org.gradoop.flink.model.impl.epgm.LogicalGraph;
 import org.gradoop.flink.model.impl.operators.matching.common.statistics.GraphStatistics;
 import org.gradoop.flink.model.impl.operators.matching.common.statistics.GraphStatisticsHDFSReader;
 import org.gradoop.flink.util.GradoopFlinkConfig;
-import org.gradoop.storage.impl.accumulo.io.AccumuloDataSource;
 import org.gradoop.storage.impl.hbase.io.HBaseDataSource;
 
 import java.io.File;
@@ -155,16 +154,9 @@ public class CypherBenchmark extends AbstractRunner implements ProgramDescriptio
         source = ((HBaseDataSource) source)
           .applyEdgePredicate(Predicates.HBase.getEdgeFilter(QUERY));
         break;
-
-      case FORMAT_ACCUMULO:
-        source = ((AccumuloDataSource) source)
-          .applyVertexPredicate(Predicates.Accumulo.getVertexFilter(QUERY, FIRST_NAME));
-        source = ((AccumuloDataSource) source)
-          .applyEdgePredicate(Predicates.Accumulo.getEdgeFilter(QUERY));
-        break;
       default:
         throw new IllegalArgumentException("The flag to enable predicate pushdown is only valid" +
-          " with the input formats: [hbase,accumulo].");
+          " with the input formats: [" + FORMAT_HBASE + "].");
       }
     }
 

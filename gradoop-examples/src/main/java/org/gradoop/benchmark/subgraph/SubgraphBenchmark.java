@@ -28,9 +28,7 @@ import org.gradoop.flink.model.impl.functions.epgm.ByLabel;
 import org.gradoop.flink.model.impl.operators.subgraph.Subgraph;
 import org.gradoop.flink.util.GradoopFlinkConfig;
 import org.gradoop.storage.common.predicate.query.Query;
-import org.gradoop.storage.impl.accumulo.io.AccumuloDataSource;
 import org.gradoop.storage.impl.hbase.io.HBaseDataSource;
-import org.gradoop.storage.utils.AccumuloFilters;
 import org.gradoop.storage.utils.HBaseFilters;
 
 import java.io.File;
@@ -47,7 +45,7 @@ public class SubgraphBenchmark extends AbstractRunner implements ProgramDescript
    */
   private static final String OPTION_INPUT_PATH = "i";
   /**
-   * Option to declare input graph format (csv, indexed, hbase, accumulo)
+   * Option to declare input graph format (csv, indexed, hbase)
    */
   private static final String OPTION_INPUT_FORMAT = "f";
   /**
@@ -75,11 +73,11 @@ public class SubgraphBenchmark extends AbstractRunner implements ProgramDescript
    */
   private static final String OPTION_USE_PREDICATE_PUSHDOWN = "r";
   /**
-   * Used input path or table prefix (HBase, Accumulo)
+   * Used input path or table prefix (HBase)
    */
   private static String INPUT_PATH;
   /**
-   * Used input format (csv, indexed, hbase, accumulo)
+   * Used input format (csv, indexed, hbase)
    */
   private static String INPUT_FORMAT;
   /**
@@ -111,7 +109,7 @@ public class SubgraphBenchmark extends AbstractRunner implements ProgramDescript
     OPTIONS.addOption(OPTION_INPUT_PATH, "input", true,
       "Path to csv source files or table prefix (if a store is chosen as format).");
     OPTIONS.addOption(OPTION_INPUT_FORMAT, "format", true,
-      "Input graph format (csv, indexed, hbase, accumulo).");
+      "Input graph format (csv, indexed, hbase).");
     OPTIONS.addOption(OPTION_OUTPUT_PATH, "output", true,
       "Path to output file");
     OPTIONS.addOption(OPTION_CSV_PATH, "csv", true,
@@ -162,13 +160,6 @@ public class SubgraphBenchmark extends AbstractRunner implements ProgramDescript
           Query.elements().fromAll().where(HBaseFilters.labelIn(VERTEX_LABEL)));
         source = ((HBaseDataSource) source).applyEdgePredicate(
           Query.elements().fromAll().where(HBaseFilters.labelIn(EDGE_LABEL)));
-        break;
-
-      case FORMAT_ACCUMULO:
-        source = ((AccumuloDataSource) source).applyVertexPredicate(
-          Query.elements().fromAll().where(AccumuloFilters.labelIn(VERTEX_LABEL)));
-        source = ((AccumuloDataSource) source).applyEdgePredicate(
-          Query.elements().fromAll().where(AccumuloFilters.labelIn(EDGE_LABEL)));
         break;
       default:
         throw new IllegalArgumentException("The flag to enable predicate pushdown is only valid" +

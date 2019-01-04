@@ -35,8 +35,8 @@ public class HBaseSpreadingByteGraphStoreTest extends HBaseDefaultGraphStoreTest
    */
   @BeforeClass
   public static void setUp() throws IOException {
-    final GradoopHBaseConfig config = GradoopHBaseConfig.getDefaultConfig();
-    config.useSpreadingByte(32);
+    final GradoopHBaseConfig config = GradoopHBaseConfig.getDefaultConfig()
+      .useSpreadingByte(32);
     socialNetworkStore = openEPGMStore("HBaseGraphStoreSpreadingByteTest.", config);
     writeSocialGraphToStore(socialNetworkStore);
   }
