@@ -13,30 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradoop.flink.model.impl.functions.tuple;
+package org.gradoop.flink.model.impl.operators.tpgm.snapshot.tuple;
 
 import org.apache.flink.api.common.functions.MapFunction;
-import org.apache.flink.api.java.functions.FunctionAnnotation;
-import org.apache.flink.api.java.functions.KeySelector;
-import org.apache.flink.api.java.tuple.Tuple2;
+import org.gradoop.common.model.impl.pojo.temporal.TemporalEdge;
 
 /**
- * (f0,f1) => f1
- *
- * @param <T0> f0 type
- * @param <T1> f1 type
+ * Creates a simpler tuple-based representation of a temporal edge.
  */
-@FunctionAnnotation.ForwardedFields("f1->*")
-public class Value1Of2<T0, T1>
-  implements MapFunction<Tuple2<T0, T1>, T1>, KeySelector<Tuple2<T0, T1>, T1> {
+public class TemporalEdgeToTempEdgeTuple implements MapFunction<TemporalEdge, TempEdgeTuple> {
+
+  /**
+   * Reduce object instantiations.
+   */
+  private final TempEdgeTuple reuseTuple = new TempEdgeTuple();
 
   @Override
-  public T1 map(Tuple2<T0, T1> pair) throws Exception {
-    return pair.f1;
-  }
-
-  @Override
-  public T1 getKey(Tuple2<T0, T1> pair) throws Exception {
-    return pair.f1;
+  public TempEdgeTuple map(TemporalEdge value) {
+    reuseTuple.f0 = value.getId();
+    reuseTuple.f1 = value.getSourceId();
+    reuseTuple.f2 = value.getTargetId();
+    reuseTuple.f3 = value.getValidTime();
+    return reuseTuple;
   }
 }

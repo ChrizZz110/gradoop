@@ -13,30 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradoop.flink.model.impl.functions.tuple;
+package org.gradoop.flink.model.impl.functions.tpgm;
 
-import org.apache.flink.api.common.functions.MapFunction;
-import org.apache.flink.api.java.functions.FunctionAnnotation;
-import org.apache.flink.api.java.functions.KeySelector;
-import org.apache.flink.api.java.tuple.Tuple2;
+import org.gradoop.flink.model.api.tpgm.functions.TemporalPredicate;
 
 /**
- * (f0,f1) => f1
- *
- * @param <T0> f0 type
- * @param <T1> f1 type
+ * A temporal predicate that matches all time intervals.
  */
-@FunctionAnnotation.ForwardedFields("f1->*")
-public class Value1Of2<T0, T1>
-  implements MapFunction<Tuple2<T0, T1>, T1>, KeySelector<Tuple2<T0, T1>, T1> {
+public class All implements TemporalPredicate {
 
   @Override
-  public T1 map(Tuple2<T0, T1> pair) throws Exception {
-    return pair.f1;
+  public boolean test(long from, long to) {
+    return true;
   }
 
   @Override
-  public T1 getKey(Tuple2<T0, T1> pair) throws Exception {
-    return pair.f1;
+  public String toString() {
+    return "ALL";
   }
 }
