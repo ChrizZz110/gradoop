@@ -56,7 +56,7 @@ public class CSVLineToTemporalGraphHead extends CSVLineToElement<TemporalGraphHe
       parseProperties(MetaDataSource.GRAPH_TYPE, label, tokens[2])
     );
 
-    Matcher matcher = temporalPattern.matcher(tokens[3]);
+    Matcher matcher = TEMPORAL_PATTERN.matcher(tokens[3]);
 
     validateTemporalData(matcher);
     graphHead.setTransactionTime(parseTransactionTime(matcher));

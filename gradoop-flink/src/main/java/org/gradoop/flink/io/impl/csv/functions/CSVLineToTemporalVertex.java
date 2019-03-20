@@ -56,7 +56,7 @@ public class CSVLineToTemporalVertex extends CSVLineToElement<TemporalVertex> {
       parseGradoopIds(tokens[1])
     );
 
-    Matcher matcher = temporalPattern.matcher(tokens[4]);
+    Matcher matcher = TEMPORAL_PATTERN.matcher(tokens[4]);
 
     validateTemporalData(matcher);
     vertex.setTransactionTime(parseTransactionTime(matcher));

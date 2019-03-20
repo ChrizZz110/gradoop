@@ -44,7 +44,8 @@ abstract class CSVLineToElement<E extends EPGMElement> extends RichMapFunction<S
   /**
    * Temporal data pattern to parse the temporal string
    */
-  final Pattern temporalPattern;
+  static final Pattern TEMPORAL_PATTERN =
+    Pattern.compile("\\((-?\\d+),(-?\\d+)\\),\\((-?\\d+),(-?\\d+)\\)");
   /**
    * Stores the properties for the {@link EPGMElement} to be parsed.
    */
@@ -59,7 +60,6 @@ abstract class CSVLineToElement<E extends EPGMElement> extends RichMapFunction<S
    */
   CSVLineToElement() {
     this.properties = Properties.create();
-    this.temporalPattern = Pattern.compile("\\((-?\\d+),(-?\\d+)\\),\\((-?\\d+),(-?\\d+)\\)");
   }
 
   @Override

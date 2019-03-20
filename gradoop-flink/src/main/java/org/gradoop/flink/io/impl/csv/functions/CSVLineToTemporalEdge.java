@@ -58,7 +58,7 @@ public class CSVLineToTemporalEdge extends CSVLineToElement<TemporalEdge> {
       parseProperties(MetaDataSource.EDGE_TYPE, label, tokens[5]),
       parseGradoopIds(tokens[1]));
 
-    Matcher matcher = temporalPattern.matcher(tokens[6]);
+    Matcher matcher = TEMPORAL_PATTERN.matcher(tokens[6]);
 
     validateTemporalData(matcher);
     edge.setTransactionTime(parseTransactionTime(matcher));
