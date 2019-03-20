@@ -20,15 +20,25 @@ import org.apache.flink.api.java.tuple.Tuple3;
 import org.gradoop.common.model.impl.pojo.Edge;
 import org.gradoop.common.model.impl.pojo.GraphHead;
 import org.gradoop.common.model.impl.pojo.Vertex;
+import org.gradoop.common.model.impl.pojo.temporal.TemporalEdge;
+import org.gradoop.common.model.impl.pojo.temporal.TemporalGraphHead;
+import org.gradoop.common.model.impl.pojo.temporal.TemporalVertex;
 import org.gradoop.flink.io.api.DataSource;
 import org.gradoop.flink.io.impl.csv.functions.CSVLineToEdge;
 import org.gradoop.flink.io.impl.csv.functions.CSVLineToGraphHead;
+import org.gradoop.flink.io.impl.csv.functions.CSVLineToTemporalEdge;
+import org.gradoop.flink.io.impl.csv.functions.CSVLineToTemporalGraphHead;
+import org.gradoop.flink.io.impl.csv.functions.CSVLineToTemporalVertex;
 import org.gradoop.flink.io.impl.csv.functions.CSVLineToVertex;
 import org.gradoop.flink.io.impl.csv.metadata.CSVMetaDataSource;
 import org.gradoop.flink.model.impl.epgm.GraphCollection;
 import org.gradoop.flink.model.impl.epgm.LogicalGraph;
 import org.gradoop.flink.model.impl.operators.combination.ReduceCombination;
+import org.gradoop.flink.model.impl.tpgm.TemporalGraph;
+import org.gradoop.flink.model.impl.tpgm.TemporalGraphCollection;
 import org.gradoop.flink.util.GradoopFlinkConfig;
+
+import java.io.IOException;
 
 /**
  * A graph data source for CSV files.
@@ -87,5 +97,36 @@ public class CSVDataSource extends CSVBase implements DataSource {
 
 
     return getConfig().getGraphCollectionFactory().fromDataSets(graphHeads, vertices, edges);
+  }
+
+  @Override
+  public TemporalGraph getTemporalGraph() throws IOException {
+    TemporalGraphCollection temporalGraphCollection = getTemporalGraphCollection();
+    return getConfig().getTemporalGraphFactory()
+      .fromDataSets(temporalGraphCollection.getVertices(), temporalGraphCollection.getEdges());
+  }
+
+  @Override
+  public TemporalGraphCollection getTemporalGraphCollection() throws IOException {
+    DataSet<Tuple3<String, String, String>> metaData =
+      new CSVMetaDataSource().readDistributed(getMetaDataPath(), getConfig());
+
+    DataSet<TemporalGraphHead> graphHeads = getConfig().getExecutionEnvironment()
+      .readTextFile(getGraphHeadCSVPath())
+      .map(new CSVLineToTemporalGraphHead(getConfig().getTemporalGraphHeadFactory()))
+      .withBroadcastSet(metaData, BC_METADATA);
+
+    DataSet<TemporalVertex> vertices = getConfig().getExecutionEnvironment()
+      .readTextFile(getVertexCSVPath())
+      .map(new CSVLineToTemporalVertex(getConfig().getTemporalVertexFactory()))
+      .withBroadcastSet(metaData, BC_METADATA);
+
+    DataSet<TemporalEdge> edges = getConfig().getExecutionEnvironment()
+      .readTextFile(getEdgeCSVPath())
+      .map(new CSVLineToTemporalEdge(getConfig().getTemporalEdgeFactory()))
+      .withBroadcastSet(metaData, BC_METADATA);
+
+    return getConfig().getTemporalGraphCollectionFactory()
+      .fromDataSets(graphHeads, vertices, edges);
   }
 }

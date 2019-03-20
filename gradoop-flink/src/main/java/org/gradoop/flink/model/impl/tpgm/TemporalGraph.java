@@ -44,6 +44,7 @@ import org.gradoop.flink.model.impl.operators.subgraph.Subgraph;
 import org.gradoop.flink.model.impl.operators.transformation.Transformation;
 import org.gradoop.flink.util.GradoopFlinkConfig;
 
+import java.io.IOException;
 import java.util.Objects;
 
 /**
@@ -114,15 +115,13 @@ public class TemporalGraph implements BaseGraph<TemporalGraphHead, TemporalVerte
   }
 
   @Override
-  public void writeTo(DataSink dataSink) {
-    throw new UnsupportedOperationException(
-      "Writing a temporal graph to a DataSink is not implemented yet.");
+  public void writeTo(DataSink dataSink) throws IOException {
+    dataSink.write(this);
   }
 
   @Override
-  public void writeTo(DataSink dataSink, boolean overWrite) {
-    throw new UnsupportedOperationException(
-      "Writing a temporal graph to a DataSink is not implemented yet.");
+  public void writeTo(DataSink dataSink, boolean overWrite) throws IOException {
+    dataSink.write(this, overWrite);
   }
 
   @Override
