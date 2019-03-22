@@ -87,6 +87,8 @@ public class TemporalGraphCollectionTest extends GradoopFlinkTestBase {
 
   /**
    * Test the {@link TemporalGraphCollection#writeTo(DataSink)} method.
+   *
+   * @throws Exception in case of failure
    */
   @Test
   public void testWriteTo() throws Exception {
@@ -104,7 +106,7 @@ public class TemporalGraphCollectionTest extends GradoopFlinkTestBase {
   }
 
   /**
-   * Test the {@link TemporalGraphCollection#writeTo(DataSink, boolean)} method.
+   * Test the {@link TemporalGraphCollection#writeTo(DataSink, boolean)} method with overwriting.
    */
   @Test
   public void testWriteToOverwrite() throws Exception {
@@ -133,8 +135,8 @@ public class TemporalGraphCollectionTest extends GradoopFlinkTestBase {
   }
 
   /**
-   * Test the {@link TemporalGraphCollection#writeTo(DataSink, boolean)} method with an unsupported
-   * sink.
+   * Test the {@link TemporalGraphCollection#writeTo(DataSink, boolean)} method with overwriting
+   * and an unsupported sink.
    */
   @Test(expected = UnsupportedOperationException.class)
   public void testUnsupportedWriteToOverwrite() throws IOException {

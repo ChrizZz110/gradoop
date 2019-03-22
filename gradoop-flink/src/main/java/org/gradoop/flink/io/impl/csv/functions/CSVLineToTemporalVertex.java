@@ -30,14 +30,14 @@ import java.util.regex.Matcher;
  *
  * {@code vertex-id;[graph-ids];label;value_1|value_2|...|value_n;(tx-from,tx-to),(val-from,val-to)}
  */
-public class CSVLineToTemporalVertex extends CSVLineToElement<TemporalVertex> {
+public class CSVLineToTemporalVertex extends CSVLineToTemporalElement<TemporalVertex> {
   /**
    * Used to instantiate the vertex.
    */
   private final EPGMVertexFactory<TemporalVertex> vertexFactory;
 
   /**
-   * Creates a CSVLineToTemporalVertex converter
+   * Creates a CSVLineToTemporalVertex converter.
    *
    * @param vertexFactory the factory that is used to create a vertex object
    */

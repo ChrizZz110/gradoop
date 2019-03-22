@@ -126,7 +126,11 @@ public abstract class ElementToCSV<E extends EPGMElement, T extends Tuple>
    * @return CSV string representation
    */
   String getTemporalDataString(Tuple2<Long, Long> transactionTime, Tuple2<Long, Long> validTime) {
-    return transactionTime + CSVConstants.LIST_DELIMITER + validTime;
+    return String.format("(%d,%d),(%d,%d)",
+      transactionTime.f0,
+      transactionTime.f1,
+      validTime.f0,
+      validTime.f1);
   }
 
   /**

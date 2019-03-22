@@ -52,21 +52,20 @@ public class ElementToPropertyMetaData<E extends EPGMElement>
   }
 
   @Override
-  public Tuple3<String, String, Set<String>> map(E e) throws Exception {
-
-    if (e instanceof EPGMEdge) {
+  public Tuple3<String, String, Set<String>> map(E element) throws Exception {
+    if (element instanceof EPGMEdge) {
       reuseTuple.f0 = MetaDataSource.EDGE_TYPE;
-    } else if (e instanceof EPGMVertex) {
+    } else if (element instanceof EPGMVertex) {
       reuseTuple.f0 = MetaDataSource.VERTEX_TYPE;
-    } else if (e instanceof EPGMGraphHead) {
+    } else if (element instanceof EPGMGraphHead) {
       reuseTuple.f0 = MetaDataSource.GRAPH_TYPE;
     } else {
-      throw new Exception("Unsupported element class '" + e.getClass() + "'.");
+      throw new IllegalArgumentException("Unsupported element class '" + element.getClass() + "'.");
     }
-    reuseTuple.f1 = StringEscaper.escape(e.getLabel(), CSVConstants.ESCAPED_CHARACTERS);
+    reuseTuple.f1 = StringEscaper.escape(element.getLabel(), CSVConstants.ESCAPED_CHARACTERS);
     reuseTuple.f2.clear();
-    if (e.getProperties() != null) {
-      for (Property property : e.getProperties()) {
+    if (element.getProperties() != null) {
+      for (Property property : element.getProperties()) {
         reuseTuple.f2.add(CSVMetaDataParser.getPropertyMetaData(property));
       }
     }

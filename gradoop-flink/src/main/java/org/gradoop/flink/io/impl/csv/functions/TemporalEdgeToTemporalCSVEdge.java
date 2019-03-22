@@ -28,7 +28,7 @@ import org.gradoop.flink.io.impl.csv.tuples.TemporalCSVEdge;
 public class TemporalEdgeToTemporalCSVEdge extends ElementToCSV<TemporalEdge, TemporalCSVEdge> {
 
   /**
-   * Reduce object instantiations
+   * Reduce object instantiations.
    */
   private final TemporalCSVEdge csvEdge = new TemporalCSVEdge();
 

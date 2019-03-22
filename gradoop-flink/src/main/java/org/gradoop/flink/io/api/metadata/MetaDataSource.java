@@ -59,8 +59,7 @@ public interface MetaDataSource<M extends MetaData> {
    * @param graph logical graph
    * @return meta data information
    */
-  @SuppressWarnings("unchecked")
-  default DataSet<Tuple3<String, String, String>> tuplesFromGraph(BaseGraph graph) {
+  default DataSet<Tuple3<String, String, String>> tuplesFromGraph(BaseGraph<?, ?, ?, ?, ?> graph) {
     return tuplesFromElements(graph.getVertices())
       .union(tuplesFromElements(graph.getEdges()));
   }
@@ -71,9 +70,8 @@ public interface MetaDataSource<M extends MetaData> {
    * @param graphCollection graph collection
    * @return meta data information
    */
-  @SuppressWarnings("unchecked")
   default DataSet<Tuple3<String, String, String>> tuplesFromCollection(
-    BaseGraphCollection graphCollection) {
+    BaseGraphCollection<?, ?, ?, ?> graphCollection) {
     return tuplesFromElements(graphCollection.getVertices())
       .union(tuplesFromElements(graphCollection.getEdges()))
       .union(tuplesFromElements(graphCollection.getGraphHeads()));

@@ -30,7 +30,7 @@ import java.util.regex.Matcher;
  *
  * {@code graph-id;label;value_1|value_2|...|value_n;(tx-from,tx-to),(val-from,val-to)}
  */
-public class CSVLineToTemporalGraphHead extends CSVLineToElement<TemporalGraphHead> {
+public class CSVLineToTemporalGraphHead extends CSVLineToTemporalElement<TemporalGraphHead> {
 
   /**
    * Used to instantiate the vertex.
@@ -38,7 +38,7 @@ public class CSVLineToTemporalGraphHead extends CSVLineToElement<TemporalGraphHe
   private final EPGMGraphHeadFactory<TemporalGraphHead> graphHeadFactory;
 
   /**
-   * Creates a CSVLineToTemporalGraphHead converter
+   * Creates a CSVLineToTemporalGraphHead converter.
    *
    * @param graphHeadFactory the factory that is used to create a graph head object
    */

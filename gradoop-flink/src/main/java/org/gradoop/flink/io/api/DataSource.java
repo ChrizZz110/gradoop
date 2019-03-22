@@ -31,6 +31,7 @@ public interface DataSource {
    * Reads the input as logical graph.
    *
    * @return logial graph
+   * @throws IOException if the reading of the graph data fails
    */
   LogicalGraph getLogicalGraph() throws IOException;
 
@@ -38,6 +39,7 @@ public interface DataSource {
    * Reads the input as graph collection.
    *
    * @return graph collection
+   * @throws IOException if the reading of the graph data fails
    */
   GraphCollection getGraphCollection() throws IOException;
 
@@ -49,7 +51,7 @@ public interface DataSource {
    *
    * @return temporal graph
    */
-  default TemporalGraph getTemporalGraph() throws IOException {
+  default TemporalGraph getTemporalGraph() {
     throw new UnsupportedOperationException(
       "Reading a temporal graph with this source is not supported yet.");
   }
@@ -62,7 +64,7 @@ public interface DataSource {
    *
    * @return temporal graph collection
    */
-  default TemporalGraphCollection getTemporalGraphCollection() throws IOException {
+  default TemporalGraphCollection getTemporalGraphCollection() {
     throw new UnsupportedOperationException(
       "Reading a temporal graph collection with this source is not supported yet."
     );

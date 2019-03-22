@@ -31,7 +31,7 @@ import java.util.regex.Matcher;
  * {@code edge-id;[graph-ids];source-id;target-id;edge-label;value_1|value_2|...|value_n;
  * (tx-from,tx-to),(val-from,val-to)}
  */
-public class CSVLineToTemporalEdge extends CSVLineToElement<TemporalEdge> {
+public class CSVLineToTemporalEdge extends CSVLineToTemporalElement<TemporalEdge> {
 
   /**
    * Used to instantiate the edge.
@@ -39,7 +39,7 @@ public class CSVLineToTemporalEdge extends CSVLineToElement<TemporalEdge> {
   private final EPGMEdgeFactory<TemporalEdge> edgeFactory;
 
   /**
-   * Creates a CSVLineToTemporalEdge converter
+   * Creates a CSVLineToTemporalEdge converter.
    *
    * @param edgeFactory the factory that is used to create an edge object
    */
