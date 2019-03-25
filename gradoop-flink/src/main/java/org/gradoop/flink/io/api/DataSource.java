@@ -50,8 +50,9 @@ public interface DataSource {
    * doesn't overwrite this method.
    *
    * @return temporal graph
+   * @throws IOException if the reading of the graph data fails
    */
-  default TemporalGraph getTemporalGraph() {
+  default TemporalGraph getTemporalGraph() throws IOException {
     throw new UnsupportedOperationException(
       "Reading a temporal graph with this source is not supported yet.");
   }
@@ -63,8 +64,9 @@ public interface DataSource {
    * doesn't overwrite this method.
    *
    * @return temporal graph collection
+   * @throws IOException if the reading of the graph data fails
    */
-  default TemporalGraphCollection getTemporalGraphCollection() {
+  default TemporalGraphCollection getTemporalGraphCollection() throws IOException {
     throw new UnsupportedOperationException(
       "Reading a temporal graph collection with this source is not supported yet."
     );

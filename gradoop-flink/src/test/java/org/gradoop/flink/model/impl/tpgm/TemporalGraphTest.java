@@ -56,7 +56,7 @@ public class TemporalGraphTest extends GradoopFlinkTestBase {
   private LogicalGraph testLogicalGraph;
 
   /**
-   * Temporary test folder to write the test graph
+   * Temporary test folder to write the test graph.
    */
   @Rule
   public TemporaryFolder testFolder = new TemporaryFolder();
@@ -91,6 +91,8 @@ public class TemporalGraphTest extends GradoopFlinkTestBase {
 
   /**
    * Test the {@link TemporalGraph#writeTo(DataSink)} method.
+   *
+   * @throws Exception in case of failure
    */
   @Test
   public void testWriteTo() throws Exception {

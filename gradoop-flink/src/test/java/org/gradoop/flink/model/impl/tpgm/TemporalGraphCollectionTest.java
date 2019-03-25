@@ -54,6 +54,9 @@ public class TemporalGraphCollectionTest extends GradoopFlinkTestBase {
    */
   private GraphCollection testCollection;
 
+  /**
+   * Temporary test folder to write the test graph.
+   */
   @Rule
   public TemporaryFolder testFolder = new TemporaryFolder();
 
