@@ -79,15 +79,18 @@ public class SnapshotTest extends GradoopFlinkTestBase {
    * Helper function creating a temporal graph from a logical graph.
    * Temporal data is extracted from properties.
    *
-   * @param lg The logical graph.
+   * @param logicalGraph The logical graph.
    * @return The temporal graph.
    */
-  private TemporalGraph toTemporalGraph(LogicalGraph lg) {
-    TemporalGraph tg = getConfig().getTemporalGraphFactory()
-      .fromNonTemporalDataSets(lg.getGraphHead(), new Extractor<>(), lg.getVertices(),
-        new Extractor<>(), lg.getEdges(), new Extractor<>());
-
-    return tg;
+  private TemporalGraph toTemporalGraph(LogicalGraph logicalGraph) {
+    return getConfig().getTemporalGraphFactory()
+      .fromNonTemporalDataSets(
+        logicalGraph.getGraphHead(),
+        new Extractor<>(),
+        logicalGraph.getVertices(),
+        new Extractor<>(),
+        logicalGraph.getEdges(),
+        new Extractor<>());
   }
 
   /**

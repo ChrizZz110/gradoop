@@ -101,15 +101,21 @@ public class Diff implements UnaryBaseGraphToBaseGraphOperator<TemporalGraph> {
   @Override
   public TemporalGraph execute(TemporalGraph graph) {
     DataSet<TemporalVertex> transformedVertices = graph.getVertices()
-      .flatMap(new DiffPerElement<>(first, second));
+      .flatMap(new DiffPerElement<>(first, second))
+      .name("Vertex difference of " + first.toString() + " and " + second.toString());
     DataSet<TemporalEdge> transformedEdges = graph.getEdges()
-      .flatMap(new DiffPerElement<>(first, second));
+      .flatMap(new DiffPerElement<>(first, second))
+      .name("Vertex difference of " + first.toString() + " and " + second.toString());
     if (validate) {
-      transformedEdges = transformedEdges.join(transformedVertices)
-        .where(new SourceId<>()).equalTo(new Id<>()).with(new LeftSide<>())
+      transformedEdges = transformedEdges
         .join(transformedVertices)
-        .where(new TargetId<>()).equalTo(new Id<>()).with(new LeftSide<>());
+        .where(new SourceId<>()).equalTo(new Id<>()).with(new LeftSide<>())
+        .name("Verify Edges (1/2)")
+        .join(transformedVertices)
+        .where(new TargetId<>()).equalTo(new Id<>()).with(new LeftSide<>())
+        .name("Verify Edges (2/2)");
     }
-    return graph.getFactory().fromDataSets(transformedVertices, transformedEdges);
+    return graph.getFactory()
+      .fromDataSets(graph.getGraphHead(), transformedVertices, transformedEdges);
   }
 }

@@ -21,11 +21,9 @@ import org.gradoop.common.model.impl.pojo.temporal.TemporalVertex;
 import org.gradoop.flink.model.api.operators.UnaryBaseGraphToBaseGraphOperator;
 import org.gradoop.flink.model.api.tpgm.functions.TemporalPredicate;
 import org.gradoop.flink.model.impl.functions.epgm.Id;
+import org.gradoop.flink.model.impl.functions.epgm.SourceId;
+import org.gradoop.flink.model.impl.functions.epgm.TargetId;
 import org.gradoop.flink.model.impl.functions.utils.LeftSide;
-import org.gradoop.flink.model.impl.operators.tpgm.snapshot.tuple.TempEdgeTuple;
-import org.gradoop.flink.model.impl.operators.tpgm.snapshot.tuple.TempVertexTuple;
-import org.gradoop.flink.model.impl.operators.tpgm.snapshot.tuple.TemporalEdgeToTempEdgeTuple;
-import org.gradoop.flink.model.impl.operators.tpgm.snapshot.tuple.TemporalVertexToTempVertexTuple;
 import org.gradoop.flink.model.impl.tpgm.TemporalGraph;
 
 import java.util.Objects;
@@ -53,26 +51,21 @@ public class Snapshot implements UnaryBaseGraphToBaseGraphOperator<TemporalGraph
 
   @Override
   public TemporalGraph execute(TemporalGraph superGraph) {
-    DataSet<TempVertexTuple> vertices = superGraph.getVertices()
-      .map(new TemporalVertexToTempVertexTuple())
-      .filter(new ByTemporalPredicate<>(temporalPredicate));
-    DataSet<TempEdgeTuple> edges = superGraph.getEdges().map(new TemporalEdgeToTempEdgeTuple())
-      .filter(new ByTemporalPredicate<>(temporalPredicate));
+    DataSet<TemporalVertex> vertices = superGraph.getVertices()
+      // Filter vertices
+      .filter(new ByTemporalPredicate<>(temporalPredicate))
+      .name("Snapshot Vertices " + temporalPredicate.toString());
+    DataSet<TemporalEdge> edges = superGraph.getEdges()
+      // Filter edges
+      .filter(new ByTemporalPredicate<>(temporalPredicate))
+      .name("Snapshot Edges " + temporalPredicate.toString())
+      // Validate edges
+      .join(vertices).where(new SourceId<>()).equalTo(new Id<>()).with(new LeftSide<>())
+      .name("Verify Edges (1/2)")
+      .join(vertices).where(new TargetId<>()).equalTo(new Id<>()).with(new LeftSide<>())
+      .name("Verify Edges (2/2)");
 
-    DataSet<TempEdgeTuple> verifiedEdges = edges
-      .join(vertices).where(1).equalTo(0).with(new LeftSide<>())
-      .join(vertices).where(2).equalTo(0).with(new LeftSide<>());
-
-    DataSet<TemporalVertex> originalVertices = superGraph.getVertices();
-    DataSet<TemporalEdge> originalEdges = superGraph.getEdges();
-
-    DataSet<TemporalVertex> resultVertices =
-      originalVertices.join(vertices).where(new Id<>()).equalTo(0).with(new LeftSide<>());
-
-    DataSet<TemporalEdge> resultEdges =
-      originalEdges.join(verifiedEdges).where(new Id<>()).equalTo(0).with(new LeftSide<>());
-
-    return superGraph.getFactory().fromDataSets(resultVertices, resultEdges);
+    return superGraph.getFactory().fromDataSets(superGraph.getGraphHead(), vertices, edges);
   }
 
 }

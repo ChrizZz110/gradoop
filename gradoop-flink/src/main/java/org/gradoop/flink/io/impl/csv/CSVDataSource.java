@@ -83,8 +83,10 @@ public class CSVDataSource extends CSVBase implements DataSource {
   @Override
   public TemporalGraph getTemporalGraph() {
     TemporalGraphCollection temporalGraphCollection = getTemporalGraphCollection();
-    return getConfig().getTemporalGraphFactory()
-      .fromDataSets(temporalGraphCollection.getVertices(), temporalGraphCollection.getEdges());
+    return getConfig().getTemporalGraphFactory().fromDataSets(
+      temporalGraphCollection.getGraphHeads(),
+      temporalGraphCollection.getVertices(),
+      temporalGraphCollection.getEdges());
   }
 
   @Override
