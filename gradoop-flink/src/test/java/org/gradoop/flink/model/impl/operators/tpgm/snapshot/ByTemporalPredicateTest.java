@@ -17,11 +17,11 @@ package org.gradoop.flink.model.impl.operators.tpgm.snapshot;
 
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.gradoop.common.model.api.entities.EPGMEdgeFactory;
+import org.gradoop.common.model.api.entities.EPGMVertexFactory;
 import org.gradoop.common.model.impl.id.GradoopId;
 import org.gradoop.common.model.impl.pojo.temporal.TemporalEdge;
-import org.gradoop.common.model.impl.pojo.temporal.TemporalEdgeFactory;
 import org.gradoop.common.model.impl.pojo.temporal.TemporalVertex;
-import org.gradoop.common.model.impl.pojo.temporal.TemporalVertexFactory;
 import org.gradoop.flink.model.GradoopFlinkTestBase;
 import org.gradoop.flink.model.api.tpgm.functions.TemporalPredicate;
 import org.junit.Test;
@@ -74,7 +74,8 @@ public class ByTemporalPredicateTest extends GradoopFlinkTestBase {
    */
   @Test
   public void testForVertices() throws Exception {
-    TemporalVertexFactory vertexFactory = new TemporalVertexFactory();
+    final EPGMVertexFactory<TemporalVertex> vertexFactory =
+      getConfig().getTemporalGraphFactory().getVertexFactory();
     // Create vertex tuples for each accepted interval.
     List<TemporalVertex> tuplesAccepted = testIntervalsAccepted.stream()
       .map(i -> {
@@ -110,7 +111,8 @@ public class ByTemporalPredicateTest extends GradoopFlinkTestBase {
    */
   @Test
   public void testForEdges() throws Exception {
-    TemporalEdgeFactory edgeFactory = new TemporalEdgeFactory();
+    final EPGMEdgeFactory<TemporalEdge> edgeFactory =
+      getConfig().getTemporalGraphFactory().getEdgeFactory();
     // Create edge tuples for each accepted interval.
     List<TemporalEdge> tuplesAccepted = testIntervalsAccepted.stream()
       .map(i -> {
