@@ -166,9 +166,8 @@ public class TemporalGraph implements BaseGraph<TemporalGraphHead, TemporalVerte
   //----------------------------------------------------------------------------
 
   @Override
-  public TemporalGraph diff(TemporalPredicate firstSnapShot, TemporalPredicate secondSnapshot,
-    boolean validate) {
-    return callForGraph(new Diff(firstSnapShot, secondSnapshot, validate));
+  public TemporalGraph diff(TemporalPredicate firstSnapShot, TemporalPredicate secondSnapshot) {
+    return callForGraph(new Diff(firstSnapShot, secondSnapshot));
   }
 
   @Override

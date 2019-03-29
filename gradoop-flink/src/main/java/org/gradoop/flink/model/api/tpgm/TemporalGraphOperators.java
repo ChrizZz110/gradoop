@@ -44,12 +44,12 @@ public interface TemporalGraphOperators extends GraphBaseOperators {
 
   /**
    * Compares two snapshots of this graph. Given two temporal predicates, this operation
-   * will check if a graph element (a vertex or an edge) was added, removed or kept in the snapshot
-   * based on the second predicate.
+   * will check if a graph element (vertex or edge) was added, removed or persists in the second
+   * snapshot compared to the first snapshot.
    *
-   * This operation returns the union of both snapshots of this, with the following changes:
+   * This operation returns the union of both snapshots with the following changes:
    * A property with key {@value org.gradoop.flink.model.impl.operators.tpgm.diff.Diff#PROPERTY_KEY}
-   * will be set on each graph element, its value will be set to
+   * will be set on each graph element. Its value will be set to
    * <ul>
    *   <li>{@code 0}, if the element is present in both snapshots.</li>
    *   <li>{@code 1}, if the element is present in the second, but not the first snapshot
@@ -58,33 +58,18 @@ public interface TemporalGraphOperators extends GraphBaseOperators {
    *   (i.e. it was removed since the first snapshot).</li>
    * </ul>
    * Graph elements present in neither snapshot will be discarded.
-   * Dangling edges will be removed in an optional validation step.
+   * This operator implies the creation of a new logical graph (i.e. graph head).
+   * The resulting graph will not be verified, i.e. dangling edges could occur. Use the
+   * {@code verify()} operator to validate the graph.
    *
    * @param firstSnapshot  The predicate used to determine the first snapshot.
    * @param secondSnapshot The predicate used to determine the second snapshot.
-   * @param validate       Should the graph (i.e. its edge set) be validated?
-   * @return This graph with a
-   * {@value org.gradoop.flink.model.impl.operators.tpgm.diff.Diff#PROPERTY_KEY} property set on all
-   * elements present in one or both snapshots of this graph.
+   * @return A new logical graph containing the union of vertex and edge elements of both snapshots,
+   * defined by the given two predicate functions. A property with key
+   * {@link org.gradoop.flink.model.impl.operators.tpgm.diff.Diff#PROPERTY_KEY} is set on each graph
+   * element with a numerical value (-1, 0, 1) defined above.
    */
-  TemporalGraph diff(TemporalPredicate firstSnapshot, TemporalPredicate secondSnapshot,
-    boolean validate);
-
-  /**
-   * Compares two snapshots of this graph with validation disabled.
-   * This is equivalent to {@link #diff(TemporalPredicate, TemporalPredicate, boolean)
-   * diff(firstSnapshot, secondSnapshot, false)}.
-   *
-   * @param firstSnapshot  The predicate used to determine the first snapshot.
-   * @param secondSnapshot The predicate used to determine the second snapshot.
-   * @return This graph with a
-   * {@value org.gradoop.flink.model.impl.operators.tpgm.diff.Diff#PROPERTY_KEY} property set on
-   * all elements present in one or both snapshots of this graph.
-   * @see #diff(TemporalPredicate, TemporalPredicate, boolean) Description of this operator.
-   */
-  default TemporalGraph diff(TemporalPredicate firstSnapshot, TemporalPredicate secondSnapshot) {
-    return diff(firstSnapshot, secondSnapshot, false);
-  }
+  TemporalGraph diff(TemporalPredicate firstSnapshot, TemporalPredicate secondSnapshot);
 
   /**
    * Evaluates the given query using the Cypher query engine. The engine uses default morphism

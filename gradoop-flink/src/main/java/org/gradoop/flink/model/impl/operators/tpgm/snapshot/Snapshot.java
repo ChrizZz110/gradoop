@@ -20,10 +20,6 @@ import org.gradoop.common.model.impl.pojo.temporal.TemporalEdge;
 import org.gradoop.common.model.impl.pojo.temporal.TemporalVertex;
 import org.gradoop.flink.model.api.operators.UnaryBaseGraphToBaseGraphOperator;
 import org.gradoop.flink.model.api.tpgm.functions.TemporalPredicate;
-import org.gradoop.flink.model.impl.functions.epgm.Id;
-import org.gradoop.flink.model.impl.functions.epgm.SourceId;
-import org.gradoop.flink.model.impl.functions.epgm.TargetId;
-import org.gradoop.flink.model.impl.functions.utils.LeftSide;
 import org.gradoop.flink.model.impl.tpgm.TemporalGraph;
 
 import java.util.Objects;
@@ -31,7 +27,11 @@ import java.util.Objects;
 /**
  * Extracts a snapshot of a temporal graph using a given temporal predicate.
  * This will calculate the subgraph of a temporal graph induced by the predicate.
- * The resulting graph will be verified, i.e. dangling edges will be removed.
+ *
+ * The application of this operator implies the creation of a new logical graph (i.e. graph head).
+ *
+ * The resulting graph will not be verified, i.e. dangling edges could occur. Use the
+ * {@code verify()} operator to validate the graph.
  */
 public class Snapshot implements UnaryBaseGraphToBaseGraphOperator<TemporalGraph> {
 
@@ -58,14 +58,9 @@ public class Snapshot implements UnaryBaseGraphToBaseGraphOperator<TemporalGraph
     DataSet<TemporalEdge> edges = superGraph.getEdges()
       // Filter edges
       .filter(new ByTemporalPredicate<>(temporalPredicate))
-      .name("Snapshot Edges " + temporalPredicate.toString())
-      // Validate edges
-      .join(vertices).where(new SourceId<>()).equalTo(new Id<>()).with(new LeftSide<>())
-      .name("Verify Edges (1/2)")
-      .join(vertices).where(new TargetId<>()).equalTo(new Id<>()).with(new LeftSide<>())
-      .name("Verify Edges (2/2)");
+      .name("Snapshot Edges " + temporalPredicate.toString());
 
-    return superGraph.getFactory().fromDataSets(superGraph.getGraphHead(), vertices, edges);
+    return superGraph.getFactory().fromDataSets(vertices, edges);
   }
 
 }
