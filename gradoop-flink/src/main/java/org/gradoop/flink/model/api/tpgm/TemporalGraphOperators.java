@@ -296,6 +296,16 @@ public interface TemporalGraphOperators extends GraphBaseOperators {
     return transform(null, null, edgeTransformationFunction);
   }
 
+  /**
+   * Verifies this graph, removing dangling edges, i.e. edges pointing to or from
+   * a vertex not contained in this graph.<br>
+   * This operator can be applied after an operator that has not checked the graphs validity.
+   * The graph head of this logical graph remains unchanged.
+   *
+   * @return this graph with all dangling edges removed.
+   */
+  TemporalGraph verify();
+
   //----------------------------------------------------------------------------
   // Auxiliary Operators
   //----------------------------------------------------------------------------

@@ -36,7 +36,7 @@ import java.util.Objects;
  * The application of this operator implies the creation of a new logical graph (i.e. graph head).
  *
  * The resulting graph will not be verified, i.e. dangling edges could occur. Use the
- * {@link org.gradoop.flink.model.impl.operators.verify.Verify} operator to validate the graph.
+ * {@link TemporalGraph#verify()} operator to validate the graph.
  */
 public class Diff implements UnaryBaseGraphToBaseGraphOperator<TemporalGraph> {
   /**

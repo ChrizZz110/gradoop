@@ -44,6 +44,7 @@ import org.gradoop.flink.model.impl.operators.matching.single.cypher.CypherPatte
 import org.gradoop.flink.model.impl.operators.subgraph.Subgraph;
 import org.gradoop.flink.model.impl.operators.tpgm.diff.Diff;
 import org.gradoop.flink.model.impl.operators.transformation.Transformation;
+import org.gradoop.flink.model.impl.operators.verify.Verify;
 import org.gradoop.flink.util.GradoopFlinkConfig;
 
 import java.io.IOException;
@@ -206,6 +207,11 @@ public class TemporalGraph implements BaseGraph<TemporalGraphHead, TemporalVerte
       graphHeadTransformationFunction,
       vertexTransformationFunction,
       edgeTransformationFunction));
+  }
+
+  @Override
+  public TemporalGraph verify() {
+    return callForGraph(new Verify<>());
   }
 
   //----------------------------------------------------------------------------
