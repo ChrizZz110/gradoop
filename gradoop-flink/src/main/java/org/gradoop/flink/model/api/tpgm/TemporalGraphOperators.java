@@ -25,9 +25,17 @@ import org.gradoop.flink.model.api.operators.UnaryBaseGraphToBaseCollectionOpera
 import org.gradoop.flink.model.api.operators.UnaryBaseGraphToBaseGraphOperator;
 import org.gradoop.flink.model.api.tpgm.functions.TemporalPredicate;
 import org.gradoop.flink.model.impl.epgm.LogicalGraph;
+import org.gradoop.flink.model.impl.functions.tpgm.AsOf;
+import org.gradoop.flink.model.impl.functions.tpgm.Between;
+import org.gradoop.flink.model.impl.functions.tpgm.ContainedIn;
+import org.gradoop.flink.model.impl.functions.tpgm.CreatedIn;
+import org.gradoop.flink.model.impl.functions.tpgm.DeletedIn;
+import org.gradoop.flink.model.impl.functions.tpgm.FromTo;
+import org.gradoop.flink.model.impl.functions.tpgm.ValidDuring;
 import org.gradoop.flink.model.impl.operators.matching.common.MatchStrategy;
 import org.gradoop.flink.model.impl.operators.matching.common.statistics.GraphStatistics;
 import org.gradoop.flink.model.impl.operators.subgraph.Subgraph;
+import org.gradoop.flink.model.impl.operators.tpgm.snapshot.Snapshot;
 import org.gradoop.flink.model.impl.tpgm.TemporalGraph;
 import org.gradoop.flink.model.impl.tpgm.TemporalGraphCollection;
 
@@ -41,6 +49,107 @@ public interface TemporalGraphOperators extends GraphBaseOperators {
   //----------------------------------------------------------------------------
   // Unary Operators
   //----------------------------------------------------------------------------
+
+  /**
+   * Extracts a snapshot of a temporal graph using a given temporal predicate. This will calculate
+   * the subgraph of a temporal graph induced by the predicate.
+   *
+   * The resulting graph is a new logical graph.
+   */
+  default TemporalGraph snapshot(TemporalPredicate predicate) {
+    return callForGraph(new Snapshot(Objects.requireNonNull(predicate)));
+  }
+
+  /**
+   * Extracts a snapshot of a temporal graph using the temporal predicate {@code AS OF t} where
+   * {@code t} is a timestamp in ms as long. This will calculate the subgraph of a temporal graph
+   * induced by the predicate.
+   *
+   * The resulting graph is a new logical graph.
+   *
+   * @see AsOf for further details.
+   */
+  default TemporalGraph asOf(long timestamp) {
+    return snapshot(new AsOf(timestamp));
+  }
+
+  /**
+   * Extracts a snapshot of a temporal graph using the temporal predicate {@code FROM t1 TO t2}
+   * where {@code t1} and {@code t2} are timestamps in ms as long. This will calculate the subgraph
+   * of a temporal graph induced by the predicate.
+   *
+   * The resulting graph is a new logical graph.
+   *
+   * @see FromTo for further details.
+   */
+  default TemporalGraph fromTo(long fromTimestamp, long toTimestamp) {
+    return snapshot(new FromTo(fromTimestamp, toTimestamp));
+  }
+
+  /**
+   * Extracts a snapshot of a temporal graph using the temporal predicate {@code BETWEEN t1 AND t2}
+   * where {@code t1} and {@code t2} are timestamps in ms as long. This will calculate the subgraph
+   * of a temporal graph induced by the predicate.
+   *
+   * The resulting graph is a new logical graph.
+   *
+   * @see Between for further details.
+   */
+  default TemporalGraph between(long fromTimestamp, long toTimestamp) {
+    return snapshot(new Between(fromTimestamp, toTimestamp));
+  }
+
+  /**
+   * Extracts a snapshot of a temporal graph using the temporal predicate
+   * {@code CONTAINED IN (t1, t2)} where {@code t1} and {@code t2} are timestamps in ms as long.
+   * This will calculate the subgraph of a temporal graph induced by the predicate.
+   *
+   * The resulting graph is a new logical graph.
+   *
+   * @see ContainedIn for further details.
+   */
+  default TemporalGraph containedIn(long fromTimestamp, long toTimestamp) {
+    return snapshot(new ContainedIn(fromTimestamp, toTimestamp));
+  }
+
+  /**
+   * Extracts a snapshot of a temporal graph using the temporal predicate
+   * {@code VALID DURING (t1, t2)} where {@code t1} and {@code t2} are timestamps in ms as long.
+   * This will calculate the subgraph of a temporal graph induced by the predicate.
+   *
+   * The resulting graph is a new logical graph.
+   *
+   * @see ValidDuring for further details.
+   */
+  default TemporalGraph validDuring(long fromTimestamp, long toTimestamp) {
+    return snapshot(new ValidDuring(fromTimestamp, toTimestamp));
+  }
+
+  /**
+   * Extracts a snapshot of a temporal graph using the temporal predicate
+   * {@code CREATED IN (t1, t2)} where {@code t1} and {@code t2} are timestamps in ms as long.
+   * This will calculate the subgraph of a temporal graph induced by the predicate.
+   *
+   * The resulting graph is a new logical graph.
+   *
+   * @see CreatedIn for further details.
+   */
+  default TemporalGraph createdIn(long fromTimestamp, long toTimestamp) {
+    return snapshot(new CreatedIn(fromTimestamp, toTimestamp));
+  }
+
+  /**
+   * Extracts a snapshot of a temporal graph using the temporal predicate
+   * {@code DELETED IN (t1, t2)} where {@code t1} and {@code t2} are timestamps in ms as long.
+   * This will calculate the subgraph of a temporal graph induced by the predicate.
+   *
+   * The resulting graph is a new logical graph.
+   *
+   * @see DeletedIn for further details.
+   */
+  default TemporalGraph deletedIn(long fromTimestamp, long toTimestamp) {
+    return snapshot(new DeletedIn(fromTimestamp, toTimestamp));
+  }
 
   /**
    * Compares two snapshots of this graph. Given two temporal predicates, this operation
