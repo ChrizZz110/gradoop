@@ -51,101 +51,113 @@ public interface TemporalGraphOperators extends GraphBaseOperators {
   //----------------------------------------------------------------------------
 
   /**
-   * Extracts a snapshot of a temporal graph using a given temporal predicate. This will calculate
-   * the subgraph of a temporal graph induced by the predicate.
+   * Extracts a snapshot of this temporal graph using a given temporal predicate.
+   * This will calculate the subgraph induced by the predicate.
    *
-   * The resulting graph is a new logical graph.
+   * @param predicate the temporal predicate to apply
+   * @return the snapshot as a new temporal graph
    */
   default TemporalGraph snapshot(TemporalPredicate predicate) {
     return callForGraph(new Snapshot(Objects.requireNonNull(predicate)));
   }
 
   /**
-   * Extracts a snapshot of a temporal graph using the temporal predicate {@code AS OF t} where
-   * {@code t} is a timestamp in ms as long. This will calculate the subgraph of a temporal graph
-   * induced by the predicate.
+   * Extracts a snapshot of this temporal graph using the temporal predicate {@code AS OF timestamp}
+   * where {@code timestamp} is a timestamp in milliseconds.
    *
-   * The resulting graph is a new logical graph.
-   *
-   * @see AsOf for further details.
+   * @param timestamp the timestamp in milliseconds to query
+   * @return the snapshot as a new temporal graph
+   * @see Snapshot
+   * @see AsOf
    */
   default TemporalGraph asOf(long timestamp) {
     return snapshot(new AsOf(timestamp));
   }
 
   /**
-   * Extracts a snapshot of a temporal graph using the temporal predicate {@code FROM t1 TO t2}
-   * where {@code t1} and {@code t2} are timestamps in ms as long. This will calculate the subgraph
-   * of a temporal graph induced by the predicate.
+   * Extracts a snapshot of this temporal graph using the temporal predicate
+   * {@code FROM fromTimestamp TO toTimestamp} where both values are timestamps in milliseconds.
    *
-   * The resulting graph is a new logical graph.
-   *
-   * @see FromTo for further details.
+   * @param fromTimestamp the from timestamp in milliseconds to query
+   * @param toTimestamp the to timestamp in milliseconds to query
+   * @return the snapshot as a new temporal graph
+   * @see Snapshot
+   * @see FromTo
    */
   default TemporalGraph fromTo(long fromTimestamp, long toTimestamp) {
     return snapshot(new FromTo(fromTimestamp, toTimestamp));
   }
 
   /**
-   * Extracts a snapshot of a temporal graph using the temporal predicate {@code BETWEEN t1 AND t2}
-   * where {@code t1} and {@code t2} are timestamps in ms as long. This will calculate the subgraph
-   * of a temporal graph induced by the predicate.
+   * Extracts a snapshot of this temporal graph using the temporal predicate
+   * {@code BETWEEN fromTimestamp AND toTimestamp} where both values are timestamps in
+   * milliseconds.
    *
-   * The resulting graph is a new logical graph.
-   *
-   * @see Between for further details.
+   * @param fromTimestamp the from timestamp in milliseconds to query
+   * @param toTimestamp the to timestamp in milliseconds to query
+   * @return the snapshot as a new temporal graph
+   * @see Snapshot
+   * @see Between
    */
   default TemporalGraph between(long fromTimestamp, long toTimestamp) {
     return snapshot(new Between(fromTimestamp, toTimestamp));
   }
 
   /**
-   * Extracts a snapshot of a temporal graph using the temporal predicate
-   * {@code CONTAINED IN (t1, t2)} where {@code t1} and {@code t2} are timestamps in ms as long.
-   * This will calculate the subgraph of a temporal graph induced by the predicate.
+   * Extracts a snapshot of this temporal graph using the temporal predicate
+   * {@code CONTAINED IN (fromTimestamp, toTimestamp)} where both values are timestamps in
+   * milliseconds.
    *
-   * The resulting graph is a new logical graph.
-   *
-   * @see ContainedIn for further details.
+   * @param fromTimestamp the from timestamp in milliseconds to query
+   * @param toTimestamp the to timestamp in milliseconds to query
+   * @return the snapshot as a new temporal graph
+   * @see Snapshot
+   * @see ContainedIn
    */
   default TemporalGraph containedIn(long fromTimestamp, long toTimestamp) {
     return snapshot(new ContainedIn(fromTimestamp, toTimestamp));
   }
 
   /**
-   * Extracts a snapshot of a temporal graph using the temporal predicate
-   * {@code VALID DURING (t1, t2)} where {@code t1} and {@code t2} are timestamps in ms as long.
-   * This will calculate the subgraph of a temporal graph induced by the predicate.
+   * Extracts a snapshot of this temporal graph using the temporal predicate
+   * {@code VALID DURING (fromTimestamp, toTimestamp)} where both values are timestamps in
+   * milliseconds.
    *
-   * The resulting graph is a new logical graph.
-   *
-   * @see ValidDuring for further details.
+   * @param fromTimestamp the from timestamp in milliseconds to query
+   * @param toTimestamp the to timestamp in milliseconds to query
+   * @return the snapshot as a new temporal graph
+   * @see Snapshot
+   * @see ValidDuring
    */
   default TemporalGraph validDuring(long fromTimestamp, long toTimestamp) {
     return snapshot(new ValidDuring(fromTimestamp, toTimestamp));
   }
 
   /**
-   * Extracts a snapshot of a temporal graph using the temporal predicate
-   * {@code CREATED IN (t1, t2)} where {@code t1} and {@code t2} are timestamps in ms as long.
-   * This will calculate the subgraph of a temporal graph induced by the predicate.
+   * Extracts a snapshot of this temporal graph using the temporal predicate
+   * {@code CREATED IN (fromTimestamp, toTimestamp)} where both values are timestamps in
+   * milliseconds.
    *
-   * The resulting graph is a new logical graph.
-   *
-   * @see CreatedIn for further details.
+   * @param fromTimestamp the from timestamp in milliseconds to query
+   * @param toTimestamp the to timestamp in milliseconds to query
+   * @return the snapshot as a new temporal graph
+   * @see Snapshot
+   * @see CreatedIn
    */
   default TemporalGraph createdIn(long fromTimestamp, long toTimestamp) {
     return snapshot(new CreatedIn(fromTimestamp, toTimestamp));
   }
 
   /**
-   * Extracts a snapshot of a temporal graph using the temporal predicate
-   * {@code DELETED IN (t1, t2)} where {@code t1} and {@code t2} are timestamps in ms as long.
-   * This will calculate the subgraph of a temporal graph induced by the predicate.
+   * Extracts a snapshot of this temporal graph using the temporal predicate
+   * {@code DELETED IN (fromTimestamp, toTimestamp)} where both values are timestamps in
+   * milliseconds.
    *
-   * The resulting graph is a new logical graph.
-   *
-   * @see DeletedIn for further details.
+   * @param fromTimestamp the from timestamp in milliseconds to query
+   * @param toTimestamp the to timestamp in milliseconds to query
+   * @return the snapshot as a new temporal graph
+   * @see Snapshot
+   * @see DeletedIn
    */
   default TemporalGraph deletedIn(long fromTimestamp, long toTimestamp) {
     return snapshot(new DeletedIn(fromTimestamp, toTimestamp));
