@@ -26,9 +26,8 @@ import java.util.Objects;
 
 /**
  * Extracts a snapshot of a temporal graph using a given temporal predicate.
- * This will calculate the subgraph of a temporal graph induced by the predicate.
- *
- * The application of this operator implies the creation of a new logical graph (i.e. graph head).
+ * This will calculate the subgraph of a temporal graph induced by the predicate. The graph head is
+ * preserved.
  *
  * The resulting graph will not be verified, i.e. dangling edges could occur. Use the
  * {@link TemporalGraph#verify()} operator to validate the graph.
@@ -54,13 +53,12 @@ public class Snapshot implements UnaryBaseGraphToBaseGraphOperator<TemporalGraph
     DataSet<TemporalVertex> vertices = superGraph.getVertices()
       // Filter vertices
       .filter(new ByTemporalPredicate<>(temporalPredicate))
-      .name("Snapshot Vertices " + temporalPredicate.toString());
+      .name("Snapshot vertices by [" + temporalPredicate.toString() + "]");
     DataSet<TemporalEdge> edges = superGraph.getEdges()
       // Filter edges
       .filter(new ByTemporalPredicate<>(temporalPredicate))
-      .name("Snapshot Edges " + temporalPredicate.toString());
+      .name("Snapshot edges by [" + temporalPredicate.toString() + "]");
 
-    return superGraph.getFactory().fromDataSets(vertices, edges);
+    return superGraph.getFactory().fromDataSets(superGraph.getGraphHead(), vertices, edges);
   }
-
 }
