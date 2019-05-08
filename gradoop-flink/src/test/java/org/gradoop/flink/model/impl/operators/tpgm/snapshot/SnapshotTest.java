@@ -69,28 +69,11 @@ public class SnapshotTest extends GradoopFlinkTestBase {
   public void runTest() throws Exception {
     FlinkAsciiGraphLoader loader = getTemporalSocialNetworkLoader();
     loader.appendToDatabaseFromString(resultGraph);
-    TemporalGraph input = toTemporalGraph(loader.getLogicalGraphByVariable(inputGraph));
+    TemporalGraph input = loader.getLogicalGraphByVariable(inputGraph)
+      .toTemporalGraph(new Extractor<>(), new Extractor<>(), new Extractor<>());
     LogicalGraph expected = loader.getLogicalGraphByVariable("expected");
     TemporalGraph result = input.callForGraph(new Snapshot(predicate));
     collectAndAssertTrue(result.toLogicalGraph().equalsByElementData(expected));
-  }
-
-  /**
-   * Helper function creating a temporal graph from a logical graph.
-   * Temporal data is extracted from properties.
-   *
-   * @param logicalGraph The logical graph.
-   * @return The temporal graph.
-   */
-  private TemporalGraph toTemporalGraph(LogicalGraph logicalGraph) {
-    return getConfig().getTemporalGraphFactory()
-      .fromNonTemporalDataSets(
-        logicalGraph.getGraphHead(),
-        new Extractor<>(),
-        logicalGraph.getVertices(),
-        new Extractor<>(),
-        logicalGraph.getEdges(),
-        new Extractor<>());
   }
 
   /**
