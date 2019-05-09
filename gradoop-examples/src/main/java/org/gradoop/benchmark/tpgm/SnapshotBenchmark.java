@@ -180,9 +180,9 @@ public class SnapshotBenchmark extends AbstractRunner implements ProgramDescript
       temporalPredicate = new ValidDuring(queryFrom, queryTo);
       break;
     case "all":
-      default:
-        temporalPredicate = new All();
-        break;
+    default:
+      temporalPredicate = new All();
+      break;
     }
 
     // get the snapshot
