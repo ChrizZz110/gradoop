@@ -33,7 +33,7 @@ import org.gradoop.flink.model.impl.functions.tpgm.CreatedIn;
 import org.gradoop.flink.model.impl.functions.tpgm.DeletedIn;
 import org.gradoop.flink.model.impl.functions.tpgm.FromTo;
 import org.gradoop.flink.model.impl.functions.tpgm.ValidDuring;
-import org.gradoop.flink.model.impl.operators.tpgm.snapshot.Snapshot;
+import org.gradoop.flink.model.impl.operators.tpgm.diff.Diff;
 import org.gradoop.flink.model.impl.tpgm.TemporalGraph;
 import org.gradoop.flink.util.GradoopFlinkConfig;
 
@@ -46,7 +46,38 @@ import java.util.concurrent.TimeUnit;
  * A dedicated program for parametrized TPGM snapshot benchmark.
  */
 public class SnapshotBenchmark extends AbstractRunner implements ProgramDescription {
-
+  /**
+   * String representation of the query type {@link All}.
+   */
+  private static final String TYPE_ALL = "all";
+  /**
+   * String representation of the query type {@link AsOf}.
+   */
+  private static final String TYPE_AS_OF = "asof";
+  /**
+   * String representation of the query type {@link Between}.
+   */
+  private static final String TYPE_BETWEEN = "between";
+  /**
+   * String representation of the query type {@link ContainedIn}.
+   */
+  private static final String TYPE_CONTAINED_IN = "containedin";
+  /**
+   * String representation of the query type {@link CreatedIn}.
+   */
+  private static final String TYPE_CREATED_IN = "createdin";
+  /**
+   * String representation of the query type {@link DeletedIn}.
+   */
+  private static final String TYPE_DELETED_IN = "deletedin";
+  /**
+   * String representation of the query type {@link FromTo}.
+   */
+  private static final String TYPE_FROM_TO = "fromto";
+  /**
+   * String representation of the query type {@link ValidDuring}.
+   */
+  private static final String TYPE_VALID_DURING = "validduring";
   /**
    * Option to declare path to indexed input graph
    */
@@ -76,7 +107,6 @@ public class SnapshotBenchmark extends AbstractRunner implements ProgramDescript
    */
   private static final String OPTION_QUERY_TYPE = "y";
 
-
   /**
    * Used input path
    */
@@ -96,24 +126,24 @@ public class SnapshotBenchmark extends AbstractRunner implements ProgramDescript
   /**
    * Used from timestamp in milliseconds
    */
-  private static String QUERY_FROM;
+  private static Long QUERY_FROM;
   /**
    * Used to timestamp in milliseconds
    */
-  private static String QUERY_TO;
+  private static Long QUERY_TO;
   /**
    * Used query type
    */
   private static String QUERY_TYPE;
 
   static {
-    OPTIONS.addOption(OPTION_INPUT_PATH,    "input", true, "Path to indexed source files.");
-    OPTIONS.addOption(OPTION_OUTPUT_PATH,   "output", true, "Path to output file");
-    OPTIONS.addOption(OPTION_CSV_PATH,      "csv", true, "Path to csv statistics");
+    OPTIONS.addRequiredOption(OPTION_INPUT_PATH,    "input", true, "Path to indexed source files.");
+    OPTIONS.addRequiredOption(OPTION_OUTPUT_PATH,   "output", true, "Path to output file");
+    OPTIONS.addRequiredOption(OPTION_CSV_PATH,      "csv", true, "Path to csv statistics");
     OPTIONS.addOption(OPTION_VERIFICATION,  "verification", false, "Verify Snapshot with join.");
     OPTIONS.addOption(OPTION_QUERY_FROM,    "from", true, "Used query from timestamp [ms]");
     OPTIONS.addOption(OPTION_QUERY_TO,      "to", true, "Used query to timestamp [ms]");
-    OPTIONS.addOption(OPTION_QUERY_TYPE,    "type", true, "Used query type");
+    OPTIONS.addRequiredOption(OPTION_QUERY_TYPE,    "type", true, "Used query type");
   }
 
   /**
@@ -129,7 +159,7 @@ public class SnapshotBenchmark extends AbstractRunner implements ProgramDescript
     CommandLine cmd = parseArguments(args, SnapshotBenchmark.class.getName());
 
     if (cmd == null) {
-      System.exit(1);
+      return;
     }
 
     // test if minimum arguments are set
@@ -148,45 +178,39 @@ public class SnapshotBenchmark extends AbstractRunner implements ProgramDescript
 
     // get temporal predicate
     TemporalPredicate temporalPredicate;
-    Long queryFrom = Long.valueOf(QUERY_FROM);
-    Long queryTo;
 
     switch (QUERY_TYPE) {
-    case "asof" :
-      temporalPredicate = new AsOf(queryFrom);
+    case TYPE_AS_OF :
+      temporalPredicate = new AsOf(QUERY_FROM);
       break;
-    case "between" :
-      queryTo = Long.valueOf(QUERY_TO);
-      temporalPredicate = new Between(queryFrom, queryTo);
+    case TYPE_BETWEEN :
+      temporalPredicate = new Between(QUERY_FROM, QUERY_TO);
       break;
-    case "containedin":
-      queryTo = Long.valueOf(QUERY_TO);
-      temporalPredicate = new ContainedIn(queryFrom, queryTo);
+    case TYPE_CONTAINED_IN:
+      temporalPredicate = new ContainedIn(QUERY_FROM, QUERY_TO);
       break;
-    case "createdin":
-      queryTo = Long.valueOf(QUERY_TO);
-      temporalPredicate = new CreatedIn(queryFrom, queryTo);
+    case TYPE_CREATED_IN:
+      temporalPredicate = new CreatedIn(QUERY_FROM, QUERY_TO);
       break;
-    case "deletedin":
-      queryTo = Long.valueOf(QUERY_TO);
-      temporalPredicate = new DeletedIn(queryFrom, queryTo);
+    case TYPE_DELETED_IN:
+      temporalPredicate = new DeletedIn(QUERY_FROM, QUERY_TO);
       break;
-    case "fromto":
-      queryTo = Long.valueOf(QUERY_TO);
-      temporalPredicate = new FromTo(queryFrom, queryTo);
+    case TYPE_FROM_TO:
+      temporalPredicate = new FromTo(QUERY_FROM, QUERY_TO);
       break;
-    case "validduring":
-      queryTo = Long.valueOf(QUERY_TO);
-      temporalPredicate = new ValidDuring(queryFrom, queryTo);
+    case TYPE_VALID_DURING:
+      temporalPredicate = new ValidDuring(QUERY_FROM, QUERY_TO);
       break;
-    case "all":
-    default:
+    case TYPE_ALL:
       temporalPredicate = new All();
       break;
+    default:
+      throw new IllegalArgumentException("The given query type '" + QUERY_TYPE +
+        "' is not supported.");
     }
 
     // get the snapshot
-    TemporalGraph snapshot = graph.callForGraph(new Snapshot(temporalPredicate));
+    TemporalGraph snapshot = graph.callForGraph(new Diff(temporalPredicate, temporalPredicate));
 
     // apply optional verification
     if (VERIFICATION) {
@@ -203,6 +227,35 @@ public class SnapshotBenchmark extends AbstractRunner implements ProgramDescript
   }
 
   /**
+   * Checks if the necessary arguments are provided for the given query type.
+   *
+   * @param cmd command line
+   */
+  private static void performSanityCheck(CommandLine cmd) {
+    switch (cmd.getOptionValue(OPTION_QUERY_TYPE)) {
+    case TYPE_BETWEEN :
+    case TYPE_CONTAINED_IN :
+    case TYPE_CREATED_IN :
+    case TYPE_DELETED_IN :
+    case TYPE_FROM_TO :
+    case TYPE_VALID_DURING :
+      if (cmd.getOptionValue(OPTION_QUERY_TO) == null) {
+        throw new IllegalArgumentException("The used query type needs the parameter '" +
+          OPTION_QUERY_TO + "' to define the query to timestamp.");
+      }
+      // fall through
+    case TYPE_AS_OF :
+      if (cmd.getOptionValue(OPTION_QUERY_FROM) == null) {
+        throw new IllegalArgumentException("The used query type needs the parameter '" +
+          OPTION_QUERY_FROM + "' to define the query from timestamp.");
+      }
+      break;
+    default :
+      break;
+    }
+  }
+
+  /**
    * Reads the given arguments from command line
    *
    * @param cmd command line
@@ -211,33 +264,15 @@ public class SnapshotBenchmark extends AbstractRunner implements ProgramDescript
     INPUT_PATH   = cmd.getOptionValue(OPTION_INPUT_PATH);
     OUTPUT_PATH  = cmd.getOptionValue(OPTION_OUTPUT_PATH);
     CSV_PATH     = cmd.getOptionValue(OPTION_CSV_PATH);
-    QUERY_FROM   = cmd.getOptionValue(OPTION_QUERY_FROM);
-    QUERY_TO     = cmd.getOptionValue(OPTION_QUERY_TO);
+
+    String queryFrom = cmd.getOptionValue(OPTION_QUERY_FROM);
+    QUERY_FROM = queryFrom == null ? null : Long.valueOf(queryFrom);
+
+    String queryTo = cmd.getOptionValue(OPTION_QUERY_TO);
+    QUERY_TO     = queryTo == null ? null : Long.valueOf(queryTo);
+
     QUERY_TYPE   = cmd.getOptionValue(OPTION_QUERY_TYPE);
     VERIFICATION = cmd.hasOption(OPTION_VERIFICATION);
-  }
-
-  /**
-   * Checks if the minimum of arguments is provided
-   *
-   * @param cmd command line
-   */
-  private static void performSanityCheck(CommandLine cmd) {
-    if (!cmd.hasOption(OPTION_INPUT_PATH)) {
-      throw new IllegalArgumentException("Define a graph input directory.");
-    }
-    if (!cmd.hasOption(OPTION_CSV_PATH)) {
-      throw new IllegalArgumentException("Path to CSV-File need to be set.");
-    }
-    if (!cmd.hasOption(OPTION_OUTPUT_PATH)) {
-      throw new IllegalArgumentException("Define a graph output directory.");
-    }
-    if (!cmd.hasOption(OPTION_QUERY_FROM)) {
-      throw new IllegalArgumentException("Define a query from timestamp.");
-    }
-    if (!cmd.hasOption(OPTION_QUERY_TYPE)) {
-      throw new IllegalArgumentException("Define a query type, e.g. 'asof'.");
-    }
   }
 
   /**
@@ -247,7 +282,6 @@ public class SnapshotBenchmark extends AbstractRunner implements ProgramDescript
    * @throws IOException exeption during file writing
    */
   private static void writeCSV(ExecutionEnvironment env) throws IOException {
-
     String head = String
       .format("%s|%s|%s|%s|%s|%s|%s%n",
         "Parallelism",

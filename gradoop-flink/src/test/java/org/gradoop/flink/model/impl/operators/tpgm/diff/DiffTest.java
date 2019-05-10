@@ -34,7 +34,7 @@ public class DiffTest extends GradoopFlinkTestBase {
   @Test
   public void testDiffOnGraph() throws Exception {
     FlinkAsciiGraphLoader loader = getTemporalSocialNetworkLoader();
-    loader.appendToDatabaseFromString("expected[" +
+    loader.appendToDatabaseFromString("expected:Forum[" +
       "(gpse:Forum {title: \"Graph Processing\", _diff: 0})" +
       "(davee:Person {name: \"Dave\", gender: \"m\", city: \"Dresden\", age: 40," +
       "__valFrom: 1543700000000L, _diff: 1})" +

@@ -27,16 +27,17 @@ import org.gradoop.flink.model.impl.tpgm.TemporalGraph;
 import java.util.Objects;
 
 /**
- * Calculates the difference between two snapshots of a graph and stores the result in a property
- * named {@link Diff#PROPERTY_KEY}.
- * The result will be a number indicating that an element is either equal in both snapshots (0) or
- * added (1) or removed (-1) in the second snapshot. Elements not present in both snapshots will be
- * discarded.
- *
- * The application of this operator implies the creation of a new logical graph (i.e. graph head).
- *
+ * Calculates the difference between two snapshots of a graph by comparing the temporal attributes
+ * of the graph elements.
+ * <p>
+ * The snapshots are extracted through two given temporal predicates. The result is a temporal graph
+ * containing the union of both graph elements. Each element gets a new property named
+ * {@link Diff#PROPERTY_KEY} whose value will be a number indicating that an element is either
+ * equal in both snapshots (0) or added (1) or removed (-1) in the second snapshot.
+ * Elements not present in both snapshots will be discarded.
+ * <p>
  * The resulting graph will not be verified, i.e. dangling edges could occur. Use the
- * {@link TemporalGraph#verify()} operator to validate the graph.
+ * {@link TemporalGraph#verify()} operator to validate the graph. The graph head is preserved.
  */
 public class Diff implements UnaryBaseGraphToBaseGraphOperator<TemporalGraph> {
   /**
@@ -85,10 +86,11 @@ public class Diff implements UnaryBaseGraphToBaseGraphOperator<TemporalGraph> {
   public TemporalGraph execute(TemporalGraph graph) {
     DataSet<TemporalVertex> transformedVertices = graph.getVertices()
       .flatMap(new DiffPerElement<>(firstPredicate, secondPredicate))
-      .name("Diff Vertices of " + firstPredicate.toString() + " and " + secondPredicate.toString());
+      .name("Diff vertices of [" + firstPredicate + "] and [" + secondPredicate + "]");
     DataSet<TemporalEdge> transformedEdges = graph.getEdges()
       .flatMap(new DiffPerElement<>(firstPredicate, secondPredicate))
-      .name("Diff Edges of " + firstPredicate.toString() + " and " + secondPredicate.toString());
-    return graph.getFactory().fromDataSets(transformedVertices, transformedEdges);
+      .name("Diff edges of [" + firstPredicate + "] and [" + secondPredicate + "]");
+    return graph.getFactory()
+      .fromDataSets(graph.getGraphHead(), transformedVertices, transformedEdges);
   }
 }
