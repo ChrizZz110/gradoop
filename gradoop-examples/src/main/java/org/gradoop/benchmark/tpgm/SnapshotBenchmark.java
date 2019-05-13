@@ -33,7 +33,7 @@ import org.gradoop.flink.model.impl.functions.tpgm.CreatedIn;
 import org.gradoop.flink.model.impl.functions.tpgm.DeletedIn;
 import org.gradoop.flink.model.impl.functions.tpgm.FromTo;
 import org.gradoop.flink.model.impl.functions.tpgm.ValidDuring;
-import org.gradoop.flink.model.impl.operators.tpgm.diff.Diff;
+import org.gradoop.flink.model.impl.operators.tpgm.snapshot.Snapshot;
 import org.gradoop.flink.model.impl.tpgm.TemporalGraph;
 import org.gradoop.flink.util.GradoopFlinkConfig;
 
@@ -210,7 +210,7 @@ public class SnapshotBenchmark extends AbstractRunner implements ProgramDescript
     }
 
     // get the snapshot
-    TemporalGraph snapshot = graph.callForGraph(new Diff(temporalPredicate, temporalPredicate));
+    TemporalGraph snapshot = graph.callForGraph(new Snapshot(temporalPredicate));
 
     // apply optional verification
     if (VERIFICATION) {
