@@ -21,7 +21,7 @@ import org.gradoop.common.model.impl.properties.PropertyValueUtils;
 import org.gradoop.flink.model.api.tpgm.functions.TemporalAttribute;
 
 /**
- * Abstract base class for calculating the maximum of a field of a time-interval for temporal
+ * Base class for calculating the maximum of a field of a time-interval for temporal
  * elements. This function ignores the default value ({@link Long#MAX_VALUE}) and handles
  * it the same way as {@code null}.
  */
