@@ -31,7 +31,7 @@ import java.util.Objects;
  * of the graph elements.
  * <p>
  * The snapshots are extracted through two given temporal predicates. The result is a temporal graph
- * containing the union of both graph elements. Each element gets a new property named
+ * containing the union of both graph element sets. Each element gets a new property named
  * {@link Diff#PROPERTY_KEY} whose value will be a number indicating that an element is either
  * equal in both snapshots (0) or added (1) or removed (-1) in the second snapshot.
  * Elements not present in both snapshots will be discarded.

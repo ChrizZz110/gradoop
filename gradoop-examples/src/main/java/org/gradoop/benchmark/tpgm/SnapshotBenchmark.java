@@ -137,13 +137,13 @@ public class SnapshotBenchmark extends AbstractRunner implements ProgramDescript
   private static String QUERY_TYPE;
 
   static {
-    OPTIONS.addRequiredOption(OPTION_INPUT_PATH,    "input", true, "Path to indexed source files.");
-    OPTIONS.addRequiredOption(OPTION_OUTPUT_PATH,   "output", true, "Path to output file");
-    OPTIONS.addRequiredOption(OPTION_CSV_PATH,      "csv", true, "Path to csv statistics");
-    OPTIONS.addOption(OPTION_VERIFICATION,  "verification", false, "Verify Snapshot with join.");
-    OPTIONS.addOption(OPTION_QUERY_FROM,    "from", true, "Used query from timestamp [ms]");
-    OPTIONS.addOption(OPTION_QUERY_TO,      "to", true, "Used query to timestamp [ms]");
-    OPTIONS.addRequiredOption(OPTION_QUERY_TYPE,    "type", true, "Used query type");
+    OPTIONS.addRequiredOption(OPTION_INPUT_PATH, "input", true, "Path to indexed source files.");
+    OPTIONS.addRequiredOption(OPTION_OUTPUT_PATH, "output", true, "Path to output file");
+    OPTIONS.addRequiredOption(OPTION_CSV_PATH, "csv", true, "Path to csv statistics");
+    OPTIONS.addRequiredOption(OPTION_QUERY_TYPE, "type", true, "Used query type");
+    OPTIONS.addOption(OPTION_VERIFICATION, "verification", false, "Verify Snapshot with join.");
+    OPTIONS.addOption(OPTION_QUERY_FROM, "from", true, "Used query from timestamp [ms]");
+    OPTIONS.addOption(OPTION_QUERY_TO, "to", true, "Used query to timestamp [ms]");
   }
 
   /**
@@ -180,10 +180,10 @@ public class SnapshotBenchmark extends AbstractRunner implements ProgramDescript
     TemporalPredicate temporalPredicate;
 
     switch (QUERY_TYPE) {
-    case TYPE_AS_OF :
+    case TYPE_AS_OF:
       temporalPredicate = new AsOf(QUERY_FROM);
       break;
-    case TYPE_BETWEEN :
+    case TYPE_BETWEEN:
       temporalPredicate = new Between(QUERY_FROM, QUERY_TO);
       break;
     case TYPE_CONTAINED_IN:
@@ -233,24 +233,24 @@ public class SnapshotBenchmark extends AbstractRunner implements ProgramDescript
    */
   private static void performSanityCheck(CommandLine cmd) {
     switch (cmd.getOptionValue(OPTION_QUERY_TYPE)) {
-    case TYPE_BETWEEN :
-    case TYPE_CONTAINED_IN :
-    case TYPE_CREATED_IN :
-    case TYPE_DELETED_IN :
-    case TYPE_FROM_TO :
-    case TYPE_VALID_DURING :
+    case TYPE_BETWEEN:
+    case TYPE_CONTAINED_IN:
+    case TYPE_CREATED_IN:
+    case TYPE_DELETED_IN:
+    case TYPE_FROM_TO:
+    case TYPE_VALID_DURING:
       if (cmd.getOptionValue(OPTION_QUERY_TO) == null) {
         throw new IllegalArgumentException("The used query type needs the parameter '" +
           OPTION_QUERY_TO + "' to define the query to timestamp.");
       }
       // fall through
-    case TYPE_AS_OF :
+    case TYPE_AS_OF:
       if (cmd.getOptionValue(OPTION_QUERY_FROM) == null) {
         throw new IllegalArgumentException("The used query type needs the parameter '" +
           OPTION_QUERY_FROM + "' to define the query from timestamp.");
       }
       break;
-    default :
+    default:
       break;
     }
   }
@@ -266,7 +266,7 @@ public class SnapshotBenchmark extends AbstractRunner implements ProgramDescript
     CSV_PATH     = cmd.getOptionValue(OPTION_CSV_PATH);
 
     String queryFrom = cmd.getOptionValue(OPTION_QUERY_FROM);
-    QUERY_FROM = queryFrom == null ? null : Long.valueOf(queryFrom);
+    QUERY_FROM   = queryFrom == null ? null : Long.valueOf(queryFrom);
 
     String queryTo = cmd.getOptionValue(OPTION_QUERY_TO);
     QUERY_TO     = queryTo == null ? null : Long.valueOf(queryTo);
@@ -293,7 +293,6 @@ public class SnapshotBenchmark extends AbstractRunner implements ProgramDescript
         "Runtime(s)");
 
     String tail = String
-      //.format("%s|%s|%s|%s|%s|%s|%s%n",
       .format("%s|%s|%s|%s|%s|%s|%s%n",
         env.getParallelism(),
         INPUT_PATH,

@@ -70,7 +70,7 @@ public interface TemporalGraphOperators extends GraphBaseOperators {
    * This will calculate the subgraph induced by the predicate.
    *
    * @param predicate the temporal predicate to apply
-   * @return the snapshot as a new temporal graph
+   * @return the snapshot as a temporal graph
    */
   default TemporalGraph snapshot(TemporalPredicate predicate) {
     return callForGraph(new Snapshot(Objects.requireNonNull(predicate)));
@@ -81,7 +81,7 @@ public interface TemporalGraphOperators extends GraphBaseOperators {
    * where {@code timestamp} is a timestamp in milliseconds.
    *
    * @param timestamp the timestamp in milliseconds to query
-   * @return the snapshot as a new temporal graph
+   * @return the snapshot as a temporal graph
    * @see Snapshot
    * @see AsOf
    */
@@ -95,7 +95,7 @@ public interface TemporalGraphOperators extends GraphBaseOperators {
    *
    * @param fromTimestamp the from timestamp in milliseconds to query
    * @param toTimestamp the to timestamp in milliseconds to query
-   * @return the snapshot as a new temporal graph
+   * @return the snapshot as a temporal graph
    * @see Snapshot
    * @see FromTo
    */
@@ -110,7 +110,7 @@ public interface TemporalGraphOperators extends GraphBaseOperators {
    *
    * @param fromTimestamp the from timestamp in milliseconds to query
    * @param toTimestamp the to timestamp in milliseconds to query
-   * @return the snapshot as a new temporal graph
+   * @return the snapshot as a temporal graph
    * @see Snapshot
    * @see Between
    */
@@ -125,7 +125,7 @@ public interface TemporalGraphOperators extends GraphBaseOperators {
    *
    * @param fromTimestamp the from timestamp in milliseconds to query
    * @param toTimestamp the to timestamp in milliseconds to query
-   * @return the snapshot as a new temporal graph
+   * @return the snapshot as a temporal graph
    * @see Snapshot
    * @see ContainedIn
    */
@@ -140,7 +140,7 @@ public interface TemporalGraphOperators extends GraphBaseOperators {
    *
    * @param fromTimestamp the from timestamp in milliseconds to query
    * @param toTimestamp the to timestamp in milliseconds to query
-   * @return the snapshot as a new temporal graph
+   * @return the snapshot as a temporal graph
    * @see Snapshot
    * @see ValidDuring
    */
@@ -155,7 +155,7 @@ public interface TemporalGraphOperators extends GraphBaseOperators {
    *
    * @param fromTimestamp the from timestamp in milliseconds to query
    * @param toTimestamp the to timestamp in milliseconds to query
-   * @return the snapshot as a new temporal graph
+   * @return the snapshot as a temporal graph
    * @see Snapshot
    * @see CreatedIn
    */
@@ -170,7 +170,7 @@ public interface TemporalGraphOperators extends GraphBaseOperators {
    *
    * @param fromTimestamp the from timestamp in milliseconds to query
    * @param toTimestamp the to timestamp in milliseconds to query
-   * @return the snapshot as a new temporal graph
+   * @return the snapshot as a temporal graph
    * @see Snapshot
    * @see DeletedIn
    */
@@ -194,13 +194,12 @@ public interface TemporalGraphOperators extends GraphBaseOperators {
    *   (i.e. it was removed since the first snapshot).</li>
    * </ul>
    * Graph elements present in neither snapshot will be discarded.
-   * This operator implies the creation of a new logical graph (i.e. graph head).
    * The resulting graph will not be verified, i.e. dangling edges could occur. Use the
-   * {@code verify()} operator to validate the graph.
+   * {@code verify()} operator to validate the graph. The graph head is preserved.
    *
    * @param firstSnapshot  The predicate used to determine the first snapshot.
    * @param secondSnapshot The predicate used to determine the second snapshot.
-   * @return A new logical graph containing the union of vertex and edge elements of both snapshots,
+   * @return A logical graph containing the union of vertex and edge sets of both snapshots,
    * defined by the given two predicate functions. A property with key
    * {@link org.gradoop.flink.model.impl.operators.tpgm.diff.Diff#PROPERTY_KEY} is set on each graph
    * element with a numerical value (-1, 0, 1) defined above.
