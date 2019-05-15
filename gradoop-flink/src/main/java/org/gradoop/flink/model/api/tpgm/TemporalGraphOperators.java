@@ -70,7 +70,7 @@ public interface TemporalGraphOperators extends GraphBaseOperators {
    * This will calculate the subgraph induced by the predicate.
    *
    * @param predicate the temporal predicate to apply
-   * @return the snapshot as a new temporal graph
+   * @return the snapshot as a temporal graph
    */
   default TemporalGraph snapshot(TemporalPredicate predicate) {
     return callForGraph(new Snapshot(Objects.requireNonNull(predicate)));
@@ -81,7 +81,7 @@ public interface TemporalGraphOperators extends GraphBaseOperators {
    * where {@code timestamp} is a timestamp in milliseconds.
    *
    * @param timestamp the timestamp in milliseconds to query
-   * @return the snapshot as a new temporal graph
+   * @return the snapshot as a temporal graph
    * @see Snapshot
    * @see AsOf
    */
@@ -95,7 +95,7 @@ public interface TemporalGraphOperators extends GraphBaseOperators {
    *
    * @param fromTimestamp the from timestamp in milliseconds to query
    * @param toTimestamp the to timestamp in milliseconds to query
-   * @return the snapshot as a new temporal graph
+   * @return the snapshot as a temporal graph
    * @see Snapshot
    * @see FromTo
    */
@@ -110,7 +110,7 @@ public interface TemporalGraphOperators extends GraphBaseOperators {
    *
    * @param fromTimestamp the from timestamp in milliseconds to query
    * @param toTimestamp the to timestamp in milliseconds to query
-   * @return the snapshot as a new temporal graph
+   * @return the snapshot as a temporal graph
    * @see Snapshot
    * @see Between
    */
@@ -125,7 +125,7 @@ public interface TemporalGraphOperators extends GraphBaseOperators {
    *
    * @param fromTimestamp the from timestamp in milliseconds to query
    * @param toTimestamp the to timestamp in milliseconds to query
-   * @return the snapshot as a new temporal graph
+   * @return the snapshot as a temporal graph
    * @see Snapshot
    * @see ContainedIn
    */
@@ -140,7 +140,7 @@ public interface TemporalGraphOperators extends GraphBaseOperators {
    *
    * @param fromTimestamp the from timestamp in milliseconds to query
    * @param toTimestamp the to timestamp in milliseconds to query
-   * @return the snapshot as a new temporal graph
+   * @return the snapshot as a temporal graph
    * @see Snapshot
    * @see ValidDuring
    */
@@ -155,7 +155,7 @@ public interface TemporalGraphOperators extends GraphBaseOperators {
    *
    * @param fromTimestamp the from timestamp in milliseconds to query
    * @param toTimestamp the to timestamp in milliseconds to query
-   * @return the snapshot as a new temporal graph
+   * @return the snapshot as a temporal graph
    * @see Snapshot
    * @see CreatedIn
    */
@@ -170,7 +170,7 @@ public interface TemporalGraphOperators extends GraphBaseOperators {
    *
    * @param fromTimestamp the from timestamp in milliseconds to query
    * @param toTimestamp the to timestamp in milliseconds to query
-   * @return the snapshot as a new temporal graph
+   * @return the snapshot as a temporal graph
    * @see Snapshot
    * @see DeletedIn
    */
@@ -180,12 +180,12 @@ public interface TemporalGraphOperators extends GraphBaseOperators {
 
   /**
    * Compares two snapshots of this graph. Given two temporal predicates, this operation
-   * will check if a graph element (a vertex or an edge) was added, removed or kept in the snapshot
-   * based on the second predicate.
+   * will check if a graph element (vertex or edge) was added, removed or persists in the second
+   * snapshot compared to the first snapshot.
    *
-   * This operation returns the union of both snapshots of this, with the following changes:
+   * This operation returns the union of both snapshots with the following changes:
    * A property with key {@value org.gradoop.flink.model.impl.operators.tpgm.diff.Diff#PROPERTY_KEY}
-   * will be set on each graph element, its value will be set to
+   * will be set on each graph element. Its value will be set to
    * <ul>
    *   <li>{@code 0}, if the element is present in both snapshots.</li>
    *   <li>{@code 1}, if the element is present in the second, but not the first snapshot
@@ -194,33 +194,17 @@ public interface TemporalGraphOperators extends GraphBaseOperators {
    *   (i.e. it was removed since the first snapshot).</li>
    * </ul>
    * Graph elements present in neither snapshot will be discarded.
-   * Dangling edges will be removed in an optional validation step.
+   * The resulting graph will not be verified, i.e. dangling edges could occur. Use the
+   * {@code verify()} operator to validate the graph. The graph head is preserved.
    *
    * @param firstSnapshot  The predicate used to determine the first snapshot.
    * @param secondSnapshot The predicate used to determine the second snapshot.
-   * @param validate       Should the graph (i.e. its edge set) be validated?
-   * @return This graph with a
-   * {@value org.gradoop.flink.model.impl.operators.tpgm.diff.Diff#PROPERTY_KEY} property set on all
-   * elements present in one or both snapshots of this graph.
+   * @return A logical graph containing the union of vertex and edge sets of both snapshots,
+   * defined by the given two predicate functions. A property with key
+   * {@link org.gradoop.flink.model.impl.operators.tpgm.diff.Diff#PROPERTY_KEY} is set on each graph
+   * element with a numerical value (-1, 0, 1) defined above.
    */
-  TemporalGraph diff(TemporalPredicate firstSnapshot, TemporalPredicate secondSnapshot,
-    boolean validate);
-
-  /**
-   * Compares two snapshots of this graph with validation disabled.
-   * This is equivalent to {@link #diff(TemporalPredicate, TemporalPredicate, boolean)
-   * diff(firstSnapshot, secondSnapshot, false)}.
-   *
-   * @param firstSnapshot  The predicate used to determine the first snapshot.
-   * @param secondSnapshot The predicate used to determine the second snapshot.
-   * @return This graph with a
-   * {@value org.gradoop.flink.model.impl.operators.tpgm.diff.Diff#PROPERTY_KEY} property set on
-   * all elements present in one or both snapshots of this graph.
-   * @see #diff(TemporalPredicate, TemporalPredicate, boolean) Description of this operator.
-   */
-  default TemporalGraph diff(TemporalPredicate firstSnapshot, TemporalPredicate secondSnapshot) {
-    return diff(firstSnapshot, secondSnapshot, false);
-  }
+  TemporalGraph diff(TemporalPredicate firstSnapshot, TemporalPredicate secondSnapshot);
 
   /**
    * Evaluates the given query using the Cypher query engine. The engine uses default morphism
@@ -446,6 +430,16 @@ public interface TemporalGraphOperators extends GraphBaseOperators {
     TransformationFunction<TemporalEdge> edgeTransformationFunction) {
     return transform(null, null, edgeTransformationFunction);
   }
+
+  /**
+   * Verifies this graph, removing dangling edges, i.e. edges pointing to or from
+   * a vertex not contained in this graph.<br>
+   * This operator can be applied after an operator that has not checked the graphs validity.
+   * The graph head of this logical graph remains unchanged.
+   *
+   * @return this graph with all dangling edges removed.
+   */
+  TemporalGraph verify();
 
   //----------------------------------------------------------------------------
   // Auxiliary Operators

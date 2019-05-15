@@ -14,6 +14,6 @@
  * limitations under the License.
  */
 /**
- * Contains tuple representations of temporal graph elements and appertaining map functions.
+ * Contains TPGM benchmark applications.
  */
-package org.gradoop.flink.model.impl.operators.tpgm.snapshot.tuple;
+package org.gradoop.benchmark.tpgm;
