@@ -17,7 +17,6 @@ package org.gradoop.benchmark.tpgm;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.io.FileUtils;
-import org.apache.flink.api.common.ProgramDescription;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.gradoop.examples.AbstractRunner;
 import org.gradoop.flink.io.api.DataSink;
@@ -45,7 +44,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * A dedicated program for parametrized TPGM snapshot benchmark.
  */
-public class SnapshotBenchmark extends AbstractRunner implements ProgramDescription {
+public class SnapshotBenchmark extends AbstractRunner {
   /**
    * String representation of the query type {@link All}.
    */
@@ -222,7 +221,7 @@ public class SnapshotBenchmark extends AbstractRunner implements ProgramDescript
     sink.write(snapshot, true);
 
     // execute and write job statistics
-    env.execute(SnapshotBenchmark.class.getSimpleName());
+    env.execute(SnapshotBenchmark.class.getSimpleName() + "P:" + env.getParallelism());
     writeCSV(env);
   }
 
@@ -311,10 +310,5 @@ public class SnapshotBenchmark extends AbstractRunner implements ProgramDescript
       writer.print(tail);
       writer.close();
     }
-  }
-
-  @Override
-  public String getDescription() {
-    return "TPGM Snapshot operator benchmark.";
   }
 }
