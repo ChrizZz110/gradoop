@@ -42,6 +42,20 @@ public abstract class AbstractTimeAggregateFunction extends BaseAggregateFunctio
   private final TemporalAttribute.Field field;
 
   /**
+   * The property value that are considered as the default 'from' value of this aggregate function.
+   * It is ignored during aggregation of valid times.
+   */
+  private final PropertyValue defaultFromValue =
+    PropertyValue.create(TemporalElement.DEFAULT_TIME_FROM);
+
+  /**
+   * The property value that are considered as the default 'to' value of this aggregate function.
+   * It is ignored during aggregation of valid times.
+   */
+  private final PropertyValue defaultToValue =
+    PropertyValue.create(TemporalElement.DEFAULT_TIME_TO);
+
+  /**
    * Sets attributes used to initialize this aggregate function.
    *
    * @param aggregatePropertyKey The aggregate property key.
@@ -83,9 +97,23 @@ public abstract class AbstractTimeAggregateFunction extends BaseAggregateFunctio
     case TO:
       return PropertyValue.create(timeInterval.f1);
     default:
-      throw new IllegalArgumentException("Field " + field + " is not supported for time intervals" +
-        ".");
+      throw new IllegalArgumentException("Field " + field +
+        " is not supported for time intervals.");
     }
+  }
+
+  /**
+   * Checks if the given property value is a temporal default value (see {@link TemporalElement}).
+   * If the temporal attribute is a {@link TemporalAttribute#TRANSACTION_TIME}, this function
+   * will return {@code false} since the transaction time is system maintained and there are no
+   * defaults to check.
+   *
+   * @param value the property value to check
+   * @return true, if the value equals a DEFAULT temporal value.
+   */
+  boolean isDefaultValue(PropertyValue value) {
+    return interval == TemporalAttribute.VALID_TIME &&
+      (value.equals(defaultFromValue) || value.equals(defaultToValue));
   }
 
   @Override

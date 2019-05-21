@@ -47,7 +47,10 @@ import static org.junit.Assert.assertEquals;
  */
 @RunWith(Parameterized.class)
 public class MinMaxTimeTest extends GradoopFlinkTestBase {
-
+  /**
+   * Current timestamp in milliseconds
+   */
+  private static final Long CURRENT_TIME = System.currentTimeMillis();
   /**
    * A factory used to create some test edges.
    */
@@ -159,12 +162,22 @@ public class MinMaxTimeTest extends GradoopFlinkTestBase {
       new MinTime(keyMin, temporalAttribute, field),
       new MaxTime(keyMax, temporalAttribute, field));
     TemporalGraphHead head = result.getGraphHead().collect().get(0);
-    // The expected values for max and min aggregations. Those should be null, when the minimum
-    // of all FROM or the maximum of all TO fields is calculated.
-    final PropertyValue min = field == FROM ? PropertyValue.NULL_VALUE :
-      PropertyValue.create(MAX_VALUE);
-    final PropertyValue max = field == TO ? PropertyValue.NULL_VALUE :
-      PropertyValue.create(MIN_VALUE);
+
+    // The expected values for max and min aggregations. For valid times, they should be null.
+    PropertyValue min = PropertyValue.NULL_VALUE;
+    PropertyValue max = PropertyValue.NULL_VALUE;
+
+    // For transaction time, it depends on the chosen field. Min and max of FROM are the current
+    // time; min and max of TO are the MAX_VALUE.
+    if (temporalAttribute == TRANSACTION_TIME) {
+      if (field == FROM) {
+        min = PropertyValue.create(CURRENT_TIME);
+        max = min;
+      } else {
+        min = PropertyValue.create(MAX_VALUE);
+        max = min;
+      }
+    }
     assertEquals(max, head.getPropertyValue(keyMaxEdge));
     assertEquals(min, head.getPropertyValue(keyMinEdge));
     assertEquals(max, head.getPropertyValue(keyMaxVertex));
@@ -191,8 +204,8 @@ public class MinMaxTimeTest extends GradoopFlinkTestBase {
   @Parameterized.Parameters(name = "{0}.{1}")
   public static Iterable<Object[]> parameters() {
     return Arrays.asList(new Object[][] {
-      {TRANSACTION_TIME, FROM, 4L, -2L, 3L, 0L, 4L, -2L},
-      {TRANSACTION_TIME, TO, 5L, -2L, 3L, 1L, 5L, -2L},
+      {TRANSACTION_TIME, FROM, 4L, MIN_VALUE, 3L, MIN_VALUE, 4L, MIN_VALUE},
+      {TRANSACTION_TIME, TO, MAX_VALUE, -2L, MAX_VALUE, 1L, MAX_VALUE, -2L},
       {VALID_TIME, FROM, 7L, -1L, 4L, 1L, 7L, -1L},
       {VALID_TIME, TO, 6L, -1L, 4L, 1L, 6L, -1L}
     });
@@ -224,12 +237,12 @@ public class MinMaxTimeTest extends GradoopFlinkTestBase {
    * @return The test graph.
    */
   private TemporalGraph getTestGraphWithAllDefaults() {
-    TemporalVertex v1 = createVertex(MIN_VALUE, MAX_VALUE, MIN_VALUE, MAX_VALUE);
-    TemporalVertex v2 = createVertex(MIN_VALUE, MAX_VALUE, MIN_VALUE, MAX_VALUE);
-    TemporalVertex v3 = createVertex(MIN_VALUE, MAX_VALUE, MIN_VALUE, MAX_VALUE);
-    TemporalEdge e1 = createEdge(v1, v2, MIN_VALUE, MAX_VALUE, MIN_VALUE, MAX_VALUE);
-    TemporalEdge e2 = createEdge(v2, v3, MIN_VALUE, MAX_VALUE, MIN_VALUE, MAX_VALUE);
-    TemporalEdge e3 = createEdge(v3, v1, MIN_VALUE, MAX_VALUE, MIN_VALUE, MAX_VALUE);
+    TemporalVertex v1 = createVertex(CURRENT_TIME, MAX_VALUE, MIN_VALUE, MAX_VALUE);
+    TemporalVertex v2 = createVertex(CURRENT_TIME, MAX_VALUE, MIN_VALUE, MAX_VALUE);
+    TemporalVertex v3 = createVertex(CURRENT_TIME, MAX_VALUE, MIN_VALUE, MAX_VALUE);
+    TemporalEdge e1 = createEdge(v1, v2, CURRENT_TIME, MAX_VALUE, MIN_VALUE, MAX_VALUE);
+    TemporalEdge e2 = createEdge(v2, v3, CURRENT_TIME, MAX_VALUE, MIN_VALUE, MAX_VALUE);
+    TemporalEdge e3 = createEdge(v3, v1, CURRENT_TIME, MAX_VALUE, MIN_VALUE, MAX_VALUE);
     DataSet<TemporalVertex> vertices = getExecutionEnvironment().fromElements(v1, v2, v3);
     DataSet<TemporalEdge> edges = getExecutionEnvironment().fromElements(e1, e2, e3);
     return getConfig().getTemporalGraphFactory().fromDataSets(vertices, edges);
