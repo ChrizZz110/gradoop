@@ -137,10 +137,9 @@ public class DiffBenchmark extends AbstractRunner {
     sink.write(snapshot, true);
 
     // execute and write job statistics
-    env.execute(DiffBenchmark.class.getSimpleName() + "P:" + env.getParallelism());
+    env.execute(DiffBenchmark.class.getSimpleName() + " - P: " + env.getParallelism());
     writeCSV(env);
   }
-
 
   /**
    * Reads the given arguments from command line

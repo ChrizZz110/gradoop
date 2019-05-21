@@ -221,7 +221,7 @@ public class SnapshotBenchmark extends AbstractRunner {
     sink.write(snapshot, true);
 
     // execute and write job statistics
-    env.execute(SnapshotBenchmark.class.getSimpleName() + "P:" + env.getParallelism());
+    env.execute(SnapshotBenchmark.class.getSimpleName() + " - P: " + env.getParallelism());
     writeCSV(env);
   }
 

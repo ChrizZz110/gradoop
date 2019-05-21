@@ -111,6 +111,7 @@ public class AggregationBenchmark extends AbstractRunner {
       new MaxVertexTime("maxVertexValidTo", valid, TemporalAttribute.Field.TO),
       new MaxEdgeTime("maxEdgeValidTo", valid, TemporalAttribute.Field.TO),
       new MinTime("minValidTo", valid, TemporalAttribute.Field.TO));
+    // todo: add 3 average aggregations here
 
     aggregate.getGraphHead().print();
 
