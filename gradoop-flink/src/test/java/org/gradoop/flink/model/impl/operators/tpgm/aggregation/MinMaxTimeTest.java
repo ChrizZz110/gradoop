@@ -192,9 +192,9 @@ public class MinMaxTimeTest extends GradoopFlinkTestBase {
   public static Iterable<Object[]> parameters() {
     return Arrays.asList(new Object[][] {
       {TRANSACTION_TIME, FROM, 4L, -2L, 3L, 0L, 4L, -2L},
-      {TRANSACTION_TIME, TO, 5L, -2L, 3L, 1L, 5L, -2L},
-      {VALID_TIME, FROM, 7L, -1L, 4L, 1L, 7L, -1L},
-      {VALID_TIME, TO, 6L, -1L, 4L, 1L, 6L, -1L}
+      {TRANSACTION_TIME, TO, 5L, -1L, 3L, 1L, 5L, -1L},
+      {VALID_TIME, FROM, 6L, -1L, 4L, 1L, 6L, -1L},
+      {VALID_TIME, TO, 7L, -1L, 4L, 1L, 7L, -1L}
     });
   }
 
@@ -207,10 +207,10 @@ public class MinMaxTimeTest extends GradoopFlinkTestBase {
     TemporalVertex v1 = createVertex(MIN_VALUE, 1, MIN_VALUE, 1);
     TemporalVertex v2 = createVertex(0, MAX_VALUE, 1, MAX_VALUE);
     TemporalVertex v3 = createVertex(1, 2, 3, 4);
-    TemporalVertex v4 = createVertex(2, 1, 4, 3);
+    TemporalVertex v4 = createVertex(2, 2, 4, 4);
     TemporalVertex v5 = createVertex(3, 3, 1, 2);
     TemporalEdge e1 = createEdge(v1, v2, MIN_VALUE, MAX_VALUE, MIN_VALUE, MAX_VALUE);
-    TemporalEdge e2 = createEdge(v2, v3, -1, -2, 7, 6);
+    TemporalEdge e2 = createEdge(v2, v3, -2, -1, 6, 7);
     TemporalEdge e3 = createEdge(v4, v5, -2, 0, 1, 1);
     TemporalEdge e4 = createEdge(v3, v5, 4, 5, -1, -1);
     DataSet<TemporalVertex> vertices = getExecutionEnvironment().fromElements(v1, v2, v3, v4, v5);

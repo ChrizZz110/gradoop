@@ -36,7 +36,7 @@ public class AverageDuration extends BaseAggregateFunction
   implements Average, TemporalAggregateFunction {
 
   /**
-   * A property value containing the number {@code 1}, as a {@code long}.
+   * A property value containing the number {@code 1}, as a {@link Long}.
    */
   private static final PropertyValue ONE = PropertyValue.create(1L);
 
@@ -63,7 +63,8 @@ public class AverageDuration extends BaseAggregateFunction
    * to a default value.
    *
    * @param element The temporal element.
-   * @return The duration of the time interval, in the internal .
+   * @return The duration of the time interval, in the internal representation used by
+   * {@link Average}.
    */
   @Override
   public PropertyValue getIncrement(TemporalElement element) {
@@ -76,15 +77,18 @@ public class AverageDuration extends BaseAggregateFunction
       timeInterval = element.getValidTime();
       break;
     default:
-      throw new IllegalArgumentException(
-        "Temporal attribute " + interval + " is not supported " + "by this aggregate function.");
+      throw new IllegalArgumentException("Temporal attribute " + interval + " is not supported.");
     }
-    if (timeInterval.f0 == null || timeInterval.f0.equals(TemporalElement.DEFAULT_TIME_FROM) ||
-      timeInterval.f1 == null || timeInterval.f1.equals(TemporalElement.DEFAULT_TIME_TO)) {
+    if (timeInterval.f0 == null || timeInterval.f1 == null) {
       return Average.IGNORED_VALUE;
+    } else if (interval != TemporalAttribute.TRANSACTION_TIME &&
+      (timeInterval.f0.equals(TemporalElement.DEFAULT_TIME_FROM) ||
+        timeInterval.f1.equals(TemporalElement.DEFAULT_TIME_TO))) {
+      return Average.IGNORED_VALUE;
+    } else {
+      return PropertyValue
+        .create(Arrays.asList(PropertyValue.create(timeInterval.f1 - timeInterval.f0), ONE));
     }
-    return PropertyValue.create(Arrays.asList(
-      PropertyValue.create(timeInterval.f1 - timeInterval.f0), ONE));
   }
 
   @Override
