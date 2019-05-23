@@ -48,7 +48,7 @@ import static org.junit.Assert.assertEquals;
 @RunWith(Parameterized.class)
 public class MinMaxTimeTest extends GradoopFlinkTestBase {
   /**
-   * Current timestamp in milliseconds
+   * Current timestamp in milliseconds.
    */
   private static final Long CURRENT_TIME = System.currentTimeMillis();
   /**
@@ -164,26 +164,23 @@ public class MinMaxTimeTest extends GradoopFlinkTestBase {
     TemporalGraphHead head = result.getGraphHead().collect().get(0);
 
     // The expected values for max and min aggregations. For valid times, they should be null.
-    PropertyValue min = PropertyValue.NULL_VALUE;
-    PropertyValue max = PropertyValue.NULL_VALUE;
+    PropertyValue defaultValue = PropertyValue.NULL_VALUE;
 
     // For transaction time, it depends on the chosen field. Min and max of FROM are the current
     // time; min and max of TO are the MAX_VALUE.
     if (temporalAttribute == TRANSACTION_TIME) {
       if (field == FROM) {
-        min = PropertyValue.create(CURRENT_TIME);
-        max = min;
+        defaultValue = PropertyValue.create(CURRENT_TIME);
       } else {
-        min = PropertyValue.create(MAX_VALUE);
-        max = min;
+        defaultValue = PropertyValue.create(MAX_VALUE);
       }
     }
-    assertEquals(max, head.getPropertyValue(keyMaxEdge));
-    assertEquals(min, head.getPropertyValue(keyMinEdge));
-    assertEquals(max, head.getPropertyValue(keyMaxVertex));
-    assertEquals(min, head.getPropertyValue(keyMinVertex));
-    assertEquals(max, head.getPropertyValue(keyMax));
-    assertEquals(min, head.getPropertyValue(keyMin));
+    assertEquals(defaultValue, head.getPropertyValue(keyMaxEdge));
+    assertEquals(defaultValue, head.getPropertyValue(keyMinEdge));
+    assertEquals(defaultValue, head.getPropertyValue(keyMaxVertex));
+    assertEquals(defaultValue, head.getPropertyValue(keyMinVertex));
+    assertEquals(defaultValue, head.getPropertyValue(keyMax));
+    assertEquals(defaultValue, head.getPropertyValue(keyMin));
   }
 
   /**

@@ -23,6 +23,7 @@ import org.gradoop.flink.model.api.tpgm.functions.aggregation.TemporalAggregateF
 import org.gradoop.flink.model.impl.operators.aggregation.functions.BaseAggregateFunction;
 
 import java.util.Objects;
+import java.util.function.BiFunction;
 
 /**
  * An abstract super class for aggregation functions that aggregate a time of a temporal element.
@@ -42,14 +43,14 @@ public abstract class AbstractTimeAggregateFunction extends BaseAggregateFunctio
   private final TemporalAttribute.Field field;
 
   /**
-   * The property value that are considered as the default 'from' value of this aggregate function.
+   * The property value that is considered as the default 'from' value of this aggregate function.
    * It is ignored during aggregation of valid times.
    */
   private final PropertyValue defaultFromValue =
     PropertyValue.create(TemporalElement.DEFAULT_TIME_FROM);
 
   /**
-   * The property value that are considered as the default 'to' value of this aggregate function.
+   * The property value that is considered as the default 'to' value of this aggregate function.
    * It is ignored during aggregation of valid times.
    */
   private final PropertyValue defaultToValue =
@@ -103,15 +104,35 @@ public abstract class AbstractTimeAggregateFunction extends BaseAggregateFunctio
   }
 
   /**
+   * Base aggregate function for min and max aggregations. Handles default behaviour and the
+   * logic of the comparison between the aggregate and increment value.
+   *
+   * @param aggregate The aggregate value.
+   * @param increment The increment value.
+   * @param comparison The function to apply the comparison between aggregate and increment value
+   * @return the aggregated value
+   */
+  PropertyValue compareAggregate(PropertyValue aggregate, PropertyValue increment,
+    BiFunction<PropertyValue, PropertyValue, PropertyValue> comparison) {
+    if (aggregate.isNull() || isDefaultValue(aggregate)) {
+      return isDefaultValue(increment) ? PropertyValue.NULL_VALUE : increment;
+    } else if (increment.isNull() || isDefaultValue(increment)) {
+      return aggregate;
+    } else {
+      return comparison.apply(aggregate, increment);
+    }
+  }
+
+  /**
    * Checks if the given property value is a temporal default value (see {@link TemporalElement}).
    * If the temporal attribute is a {@link TemporalAttribute#TRANSACTION_TIME}, this function
    * will return {@code false} since the transaction time is system maintained and there are no
    * defaults to check.
    *
    * @param value the property value to check
-   * @return true, if the value equals a DEFAULT temporal value.
+   * @return true, if the time semantic is valid time and the value equals a default temporal value.
    */
-  boolean isDefaultValue(PropertyValue value) {
+  private boolean isDefaultValue(PropertyValue value) {
     return interval == TemporalAttribute.VALID_TIME &&
       (value.equals(defaultFromValue) || value.equals(defaultToValue));
   }
