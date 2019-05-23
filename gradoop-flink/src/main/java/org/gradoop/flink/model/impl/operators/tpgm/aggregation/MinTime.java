@@ -42,6 +42,6 @@ public class MinTime extends AbstractTimeAggregateFunction {
 
   @Override
   public PropertyValue aggregate(PropertyValue aggregate, PropertyValue increment) {
-    return compareAggregate(aggregate, increment, PropertyValueUtils.Numeric::min);
+    return applyAggregateWithDefaults(aggregate, increment, PropertyValueUtils.Numeric::min);
   }
 }

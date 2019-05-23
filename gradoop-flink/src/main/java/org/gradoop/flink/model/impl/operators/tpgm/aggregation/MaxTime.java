@@ -42,6 +42,6 @@ public class MaxTime extends AbstractTimeAggregateFunction {
 
   @Override
   public PropertyValue aggregate(PropertyValue aggregate, PropertyValue increment) {
-    return compareAggregate(aggregate, increment, PropertyValueUtils.Numeric::max);
+    return applyAggregateWithDefaults(aggregate, increment, PropertyValueUtils.Numeric::max);
   }
 }

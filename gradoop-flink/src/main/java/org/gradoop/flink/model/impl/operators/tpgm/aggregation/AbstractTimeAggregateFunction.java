@@ -105,14 +105,14 @@ public abstract class AbstractTimeAggregateFunction extends BaseAggregateFunctio
 
   /**
    * Base aggregate function for min and max aggregations. Handles default behaviour and the
-   * logic of the comparison between the aggregate and increment value.
+   * logic of the aggregation.
    *
    * @param aggregate The aggregate value.
    * @param increment The increment value.
-   * @param comparison The function to apply the comparison between aggregate and increment value
+   * @param comparison The function to apply the aggregation of the aggregate and increment value
    * @return the aggregated value
    */
-  PropertyValue compareAggregate(PropertyValue aggregate, PropertyValue increment,
+  PropertyValue applyAggregateWithDefaults(PropertyValue aggregate, PropertyValue increment,
     BiFunction<PropertyValue, PropertyValue, PropertyValue> comparison) {
     if (aggregate.isNull() || isDefaultValue(aggregate)) {
       return isDefaultValue(increment) ? PropertyValue.NULL_VALUE : increment;
