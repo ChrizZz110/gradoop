@@ -21,18 +21,12 @@ import org.gradoop.common.model.impl.properties.PropertyValueUtils;
 import org.gradoop.flink.model.api.tpgm.functions.TemporalAttribute;
 
 /**
- * Abstract base class for calculating the minimum of a field of a time-interval for temporal
- * elements. This function ignores the default value ({@link Long#MIN_VALUE}) and handles
- * it the same way as {@code null}.
+ * Base class for calculating the minimum of a field of a time-interval for temporal
+ * elements. If a valid time attribute is used for aggregation, this function ignores the default
+ * values ({@link TemporalElement#DEFAULT_TIME_FROM} and {@link TemporalElement#DEFAULT_TIME_TO})
+ * and handles it the same way as {@code null}.
  */
 public class MinTime extends AbstractTimeAggregateFunction {
-
-  /**
-   * The property value that is considered the default value of this aggregate function.
-   * This value is ignored during aggregation.
-   */
-  private static final PropertyValue DEFAULT =
-    PropertyValue.create(TemporalElement.DEFAULT_TIME_FROM);
 
   /**
    * Sets attributes used to initialize this aggregate function.
@@ -48,12 +42,6 @@ public class MinTime extends AbstractTimeAggregateFunction {
 
   @Override
   public PropertyValue aggregate(PropertyValue aggregate, PropertyValue increment) {
-    if (aggregate.isNull() || aggregate.equals(DEFAULT)) {
-      return increment.equals(DEFAULT) ? PropertyValue.NULL_VALUE : increment;
-    } else if (increment.isNull() || increment.equals(DEFAULT)) {
-      return aggregate;
-    } else {
-      return PropertyValueUtils.Numeric.min(aggregate, increment);
-    }
+    return applyAggregateWithDefaults(aggregate, increment, PropertyValueUtils.Numeric::min);
   }
 }
