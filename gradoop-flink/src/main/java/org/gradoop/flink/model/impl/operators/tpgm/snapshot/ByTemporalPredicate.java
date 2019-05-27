@@ -15,20 +15,19 @@
  */
 package org.gradoop.flink.model.impl.operators.tpgm.snapshot;
 
-import java.util.Objects;
-
 import org.apache.flink.api.common.functions.FilterFunction;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.gradoop.common.model.impl.pojo.temporal.TemporalElement;
 import org.gradoop.flink.model.api.tpgm.functions.TemporalPredicate;
-import org.gradoop.flink.model.impl.operators.tpgm.snapshot.tuple.TempElementTuple;
+
+import java.util.Objects;
 
 /**
  * A filter function that accepts only elements matching a temporal predicate.
- * This filter operates on the simple tuple representation of temporal elements.
  *
- * @param <T> The temporal tuple type.
+ * @param <T> The temporal element type.
  */
-public class ByTemporalPredicate<T extends TempElementTuple> implements FilterFunction<T> {
+public class ByTemporalPredicate<T extends TemporalElement> implements FilterFunction<T> {
 
   /**
    * Condition to be checked.

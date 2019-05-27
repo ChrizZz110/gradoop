@@ -21,19 +21,23 @@ import org.gradoop.common.model.impl.pojo.temporal.TemporalVertex;
 import org.gradoop.common.model.impl.properties.PropertyValue;
 import org.gradoop.flink.model.api.operators.UnaryBaseGraphToBaseGraphOperator;
 import org.gradoop.flink.model.api.tpgm.functions.TemporalPredicate;
-import org.gradoop.flink.model.impl.functions.epgm.Id;
-import org.gradoop.flink.model.impl.functions.epgm.SourceId;
-import org.gradoop.flink.model.impl.functions.epgm.TargetId;
-import org.gradoop.flink.model.impl.functions.utils.LeftSide;
 import org.gradoop.flink.model.impl.operators.tpgm.diff.functions.DiffPerElement;
 import org.gradoop.flink.model.impl.tpgm.TemporalGraph;
 
 import java.util.Objects;
 
 /**
- * Calculates the difference between two snapshots of a graph and stores the result in a property.
- * The result will be a number indicating that an element is either equal in both snapshots or
- * added/removed in the second snapshot. Elements not present in both snapshots will be discarded.
+ * Calculates the difference between two snapshots of a graph by comparing the temporal attributes
+ * of the graph elements.
+ * <p>
+ * The snapshots are extracted through two given temporal predicates. The result is a temporal graph
+ * containing the union of both graph element sets. Each element gets a new property named
+ * {@link Diff#PROPERTY_KEY} whose value will be a number indicating that an element is either
+ * equal in both snapshots (0) or added (1) or removed (-1) in the second snapshot.
+ * Elements not present in both snapshots will be discarded.
+ * <p>
+ * The resulting graph will not be verified, i.e. dangling edges could occur. Use the
+ * {@link TemporalGraph#verify()} operator to validate the graph. The graph head is preserved.
  */
 public class Diff implements UnaryBaseGraphToBaseGraphOperator<TemporalGraph> {
   /**
@@ -59,57 +63,34 @@ public class Diff implements UnaryBaseGraphToBaseGraphOperator<TemporalGraph> {
   /**
    * The predicate used to determine the first snapshot.
    */
-  private final TemporalPredicate first;
+  private final TemporalPredicate firstPredicate;
 
   /**
    * The predicate used to determine the second snapshot.
    */
-  private final TemporalPredicate second;
-
-  /**
-   * Should the edge set be validated after this operator?
-   */
-  private final boolean validate;
+  private final TemporalPredicate secondPredicate;
 
   /**
    * Create an instance of the TPGM diff operator, setting the two predicates used to determine
    * the snapshots.
-   *
-   * @param firstPredicate  The predicate used for the first snapshot.
-   * @param secondPredicate The predicate used for the second snapshot.
-   * @param validate        Should the graph be validated?
-   */
-  public Diff(TemporalPredicate firstPredicate, TemporalPredicate secondPredicate,
-    boolean validate) {
-    this.first = Objects.requireNonNull(firstPredicate);
-    this.second = Objects.requireNonNull(secondPredicate);
-    this.validate = validate;
-  }
-
-  /**
-   * Create an instance of the TPGM diff operator, setting the two predicates used to determine
-   * the snapshots.
-   * This will not validate the graph.
    *
    * @param firstPredicate  The predicate used for the first snapshot.
    * @param secondPredicate The predicate used for the second snapshot.
    */
   public Diff(TemporalPredicate firstPredicate, TemporalPredicate secondPredicate) {
-    this(firstPredicate, secondPredicate, false);
+    this.firstPredicate = Objects.requireNonNull(firstPredicate);
+    this.secondPredicate = Objects.requireNonNull(secondPredicate);
   }
 
   @Override
   public TemporalGraph execute(TemporalGraph graph) {
     DataSet<TemporalVertex> transformedVertices = graph.getVertices()
-      .flatMap(new DiffPerElement<>(first, second));
+      .flatMap(new DiffPerElement<>(firstPredicate, secondPredicate))
+      .name("Diff vertices of [" + firstPredicate + "] and [" + secondPredicate + "]");
     DataSet<TemporalEdge> transformedEdges = graph.getEdges()
-      .flatMap(new DiffPerElement<>(first, second));
-    if (validate) {
-      transformedEdges = transformedEdges.join(transformedVertices)
-        .where(new SourceId<>()).equalTo(new Id<>()).with(new LeftSide<>())
-        .join(transformedVertices)
-        .where(new TargetId<>()).equalTo(new Id<>()).with(new LeftSide<>());
-    }
-    return graph.getFactory().fromDataSets(transformedVertices, transformedEdges);
+      .flatMap(new DiffPerElement<>(firstPredicate, secondPredicate))
+      .name("Diff edges of [" + firstPredicate + "] and [" + secondPredicate + "]");
+    return graph.getFactory()
+      .fromDataSets(graph.getGraphHead(), transformedVertices, transformedEdges);
   }
 }

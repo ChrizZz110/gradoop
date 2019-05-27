@@ -17,11 +17,13 @@ package org.gradoop.flink.model.impl.operators.tpgm.snapshot;
 
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.gradoop.common.model.api.entities.EPGMEdgeFactory;
+import org.gradoop.common.model.api.entities.EPGMVertexFactory;
 import org.gradoop.common.model.impl.id.GradoopId;
+import org.gradoop.common.model.impl.pojo.temporal.TemporalEdge;
+import org.gradoop.common.model.impl.pojo.temporal.TemporalVertex;
 import org.gradoop.flink.model.GradoopFlinkTestBase;
 import org.gradoop.flink.model.api.tpgm.functions.TemporalPredicate;
-import org.gradoop.flink.model.impl.operators.tpgm.snapshot.tuple.TempEdgeTuple;
-import org.gradoop.flink.model.impl.operators.tpgm.snapshot.tuple.TempVertexTuple;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -72,19 +74,31 @@ public class ByTemporalPredicateTest extends GradoopFlinkTestBase {
    */
   @Test
   public void testForVertices() throws Exception {
+    final EPGMVertexFactory<TemporalVertex> vertexFactory =
+      getConfig().getTemporalGraphFactory().getVertexFactory();
     // Create vertex tuples for each accepted interval.
-    List<TempVertexTuple> tuplesAccepted = testIntervalsAccepted.stream()
-      .map(i -> new TempVertexTuple(GradoopId.get(), i)).collect(Collectors.toList());
-    List<TempVertexTuple> inputTuples = new ArrayList<>(tuplesAccepted);
+    List<TemporalVertex> tuplesAccepted = testIntervalsAccepted.stream()
+      .map(i -> {
+        TemporalVertex vertex = vertexFactory.createVertex();
+        vertex.setValidTime(i);
+        return vertex;
+      })
+      .collect(Collectors.toList());
+    List<TemporalVertex> inputTuples = new ArrayList<>(tuplesAccepted);
     // Create vertex tuples for other intervals.
-    testIntervalsOther.stream().map(i -> new TempVertexTuple(GradoopId.get(), i))
+    testIntervalsOther.stream().map(i -> {
+      TemporalVertex vertex = vertexFactory.createVertex();
+      vertex.setValidTime(i);
+      return vertex;
+    })
       .forEach(inputTuples::add);
     // Apply the filter to the input.
-    List<TempVertexTuple> result = getExecutionEnvironment()
-      .fromCollection(inputTuples, TypeInformation.of(TempVertexTuple.class))
-      .filter(new ByTemporalPredicate<>(testPredicate)).collect();
+    List<TemporalVertex> result = getExecutionEnvironment()
+      .fromCollection(inputTuples, TypeInformation.of(TemporalVertex.class))
+      .filter(new ByTemporalPredicate<>(testPredicate))
+      .collect();
     // Sort the result and expected results to allow for comparison.
-    Comparator<TempVertexTuple> comparator = Comparator.comparing(TempVertexTuple::getVertexId);
+    Comparator<TemporalVertex> comparator = Comparator.comparing(TemporalVertex::getId);
     result.sort(comparator);
     tuplesAccepted.sort(comparator);
     assertArrayEquals(tuplesAccepted.toArray(), result.toArray());
@@ -97,21 +111,32 @@ public class ByTemporalPredicateTest extends GradoopFlinkTestBase {
    */
   @Test
   public void testForEdges() throws Exception {
+    final EPGMEdgeFactory<TemporalEdge> edgeFactory =
+      getConfig().getTemporalGraphFactory().getEdgeFactory();
     // Create edge tuples for each accepted interval.
-    List<TempEdgeTuple> tuplesAccepted = testIntervalsAccepted.stream()
-      .map(i -> new TempEdgeTuple(GradoopId.get(), GradoopId.get(), GradoopId.get(), i))
+    List<TemporalEdge> tuplesAccepted = testIntervalsAccepted.stream()
+      .map(i -> {
+        TemporalEdge edge = edgeFactory.createEdge(GradoopId.get(), GradoopId.get());
+        edge.setValidTime(i);
+        return edge;
+      })
       .collect(Collectors.toList());
-    List<TempEdgeTuple> inputTuples = new ArrayList<>(tuplesAccepted);
+    List<TemporalEdge> inputTuples = new ArrayList<>(tuplesAccepted);
     // Create edge tuples for other intervals.
     testIntervalsOther.stream()
-      .map(i -> new TempEdgeTuple(GradoopId.get(), GradoopId.get(), GradoopId.get(), i))
+      .map(i -> {
+        TemporalEdge edge = edgeFactory.createEdge(GradoopId.get(), GradoopId.get());
+        edge.setValidTime(i);
+        return edge;
+      })
       .forEach(inputTuples::add);
     // Apply the filter to the input.
-    List<TempEdgeTuple> result = getExecutionEnvironment()
-      .fromCollection(inputTuples, TypeInformation.of(TempEdgeTuple.class))
-      .filter(new ByTemporalPredicate<>(testPredicate)).collect();
+    List<TemporalEdge> result = getExecutionEnvironment()
+      .fromCollection(inputTuples, TypeInformation.of(TemporalEdge.class))
+      .filter(new ByTemporalPredicate<>(testPredicate))
+      .collect();
     // Sort the result and expected results to allow for comparison.
-    Comparator<TempEdgeTuple> comparator = Comparator.comparing(TempEdgeTuple::getEdgeId);
+    Comparator<TemporalEdge> comparator = Comparator.comparing(TemporalEdge::getId);
     result.sort(comparator);
     tuplesAccepted.sort(comparator);
     assertArrayEquals(tuplesAccepted.toArray(), result.toArray());
