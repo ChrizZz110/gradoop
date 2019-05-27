@@ -202,9 +202,9 @@ public class MinMaxTimeTest extends GradoopFlinkTestBase {
   public static Iterable<Object[]> parameters() {
     return Arrays.asList(new Object[][] {
       {TRANSACTION_TIME, FROM, 4L, MIN_VALUE, 3L, MIN_VALUE, 4L, MIN_VALUE},
-      {TRANSACTION_TIME, TO, MAX_VALUE, -2L, MAX_VALUE, 1L, MAX_VALUE, -2L},
-      {VALID_TIME, FROM, 7L, -1L, 4L, 1L, 7L, -1L},
-      {VALID_TIME, TO, 6L, -1L, 4L, 1L, 6L, -1L}
+      {TRANSACTION_TIME, TO, MAX_VALUE, -1L, MAX_VALUE, 1L, MAX_VALUE, -1L},
+      {VALID_TIME, FROM, 6L, -1L, 4L, 1L, 6L, -1L},
+      {VALID_TIME, TO, 7L, -1L, 4L, 1L, 7L, -1L}
     });
   }
 
