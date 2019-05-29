@@ -23,7 +23,6 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.withSettings;
@@ -84,17 +83,27 @@ public class TemporalElementTest {
     assertEquals(validTo, elementMock.getValidTo());
     assertTrue(elementMock.getTxFrom() <= System.currentTimeMillis());
     assertEquals((Long) Long.MAX_VALUE, elementMock.getTxTo());
-    try {
-      elementMock.setValidTime(Tuple2.of(2L, 1L));
-      fail("Expected exception.");
-    } catch (IllegalArgumentException e) {
-      // Expected.
-    }
-    try {
-      elementMock.setTransactionTime(Tuple2.of(5L, 0L));
-      fail("Expected exception.");
-    } catch (IllegalArgumentException e) {
-      // Expected.
-    }
+  }
+
+  /**
+   * Test {@link TemporalElement#setValidTime(Tuple2)} with an invalid interval.
+   */
+  @Test(expected = IllegalArgumentException.class)
+  public void testValidTimeSetterWithInvalidValues() {
+    TemporalElement elementMock = mock(TemporalElement.class, withSettings()
+      .useConstructor(GradoopId.get(), "", null, null, null)
+      .defaultAnswer(CALLS_REAL_METHODS));
+    elementMock.setValidTime(Tuple2.of(2L, 1L));
+  }
+
+  /**
+   * Test {@link TemporalElement#setTransactionTime(Tuple2)} with an invalid interval.
+   */
+  @Test(expected = IllegalArgumentException.class)
+  public void testTransactionTimeSetterWithInvalidValues() {
+    TemporalElement elementMock = mock(TemporalElement.class, withSettings()
+      .useConstructor(GradoopId.get(), "", null, null, null)
+      .defaultAnswer(CALLS_REAL_METHODS));
+    elementMock.setTransactionTime(Tuple2.of(2L, 1L));
   }
 }

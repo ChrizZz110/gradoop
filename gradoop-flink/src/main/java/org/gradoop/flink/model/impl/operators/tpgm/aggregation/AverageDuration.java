@@ -79,11 +79,11 @@ public class AverageDuration extends BaseAggregateFunction
     default:
       throw new IllegalArgumentException("Temporal attribute " + interval + " is not supported.");
     }
-    if (timeInterval.f0 == null || timeInterval.f1 == null) {
-      return Average.IGNORED_VALUE;
-    } else if (interval != TemporalAttribute.TRANSACTION_TIME &&
-      (timeInterval.f0.equals(TemporalElement.DEFAULT_TIME_FROM) ||
-        timeInterval.f1.equals(TemporalElement.DEFAULT_TIME_TO))) {
+    if (timeInterval.f0 == null || timeInterval.f1 == null ||
+      timeInterval.f0.equals(TemporalElement.DEFAULT_TIME_FROM) ||
+      timeInterval.f0.equals(TemporalElement.DEFAULT_TIME_TO) ||
+      timeInterval.f1.equals(TemporalElement.DEFAULT_TIME_FROM) ||
+      timeInterval.f1.equals(TemporalElement.DEFAULT_TIME_TO)) {
       return Average.IGNORED_VALUE;
     } else {
       return PropertyValue

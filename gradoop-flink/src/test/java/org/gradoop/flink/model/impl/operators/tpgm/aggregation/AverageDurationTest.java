@@ -37,7 +37,6 @@ import static org.gradoop.flink.model.api.tpgm.functions.TemporalAttribute.TRANS
 import static org.gradoop.flink.model.api.tpgm.functions.TemporalAttribute.VALID_TIME;
 import static org.gradoop.flink.model.impl.operators.aggregation.functions.average.Average.IGNORED_VALUE;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
 
 /**
  * Test for the {@link AverageDuration} aggregate function.
@@ -55,13 +54,11 @@ public class AverageDurationTest extends GradoopFlinkTestBase {
       .createVertex();
     testElement.setTransactionTime(Tuple2.of(DEFAULT_TIME_FROM, DEFAULT_TIME_TO));
     // This will produce an overflow, which is currently ignored.
-    assertNotEquals(IGNORED_VALUE, function.getIncrement(testElement));
+    assertEquals(IGNORED_VALUE, function.getIncrement(testElement));
     testElement.setTransactionTime(Tuple2.of(DEFAULT_TIME_FROM, 7L));
-    assertEquals(create(Arrays.asList(create(7L - Long.MIN_VALUE), create(1L))),
-      function.getIncrement(testElement));
+    assertEquals(IGNORED_VALUE, function.getIncrement(testElement));
     testElement.setTransactionTime(Tuple2.of(4L, DEFAULT_TIME_TO));
-    assertEquals(create(Arrays.asList(create(Long.MAX_VALUE - 4L), create(1L))),
-      function.getIncrement(testElement));
+    assertEquals(IGNORED_VALUE, function.getIncrement(testElement));
     testElement.setTransactionTime(Tuple2.of(1L, 11L));
     assertEquals(create(Arrays.asList(create(10L), create(1L))),
       function.getIncrement(testElement));
@@ -107,7 +104,7 @@ public class AverageDurationTest extends GradoopFlinkTestBase {
     v3.setTransactionTime(Tuple2.of(0L, DEFAULT_TIME_TO));
     v3.setValidTime(Tuple2.of(DEFAULT_TIME_FROM, 0L));
     TemporalVertex v4 = vertexFactory.createVertex();
-    v4.setTransactionTime(Tuple2.of(0L, 0L));
+    v4.setTransactionTime(Tuple2.of(DEFAULT_TIME_FROM, DEFAULT_TIME_TO));
     v4.setValidTime(Tuple2.of(-5L, -2L));
     TemporalVertex v5 = vertexFactory.createVertex();
     v5.setTransactionTime(Tuple2.of(1L, 4L));
@@ -123,7 +120,7 @@ public class AverageDurationTest extends GradoopFlinkTestBase {
     e3.setTransactionTime(Tuple2.of(-1L, DEFAULT_TIME_TO));
     e3.setValidTime(Tuple2.of(DEFAULT_TIME_FROM, -80L));
     TemporalEdge e4 = edgeFactory.createEdge(v1.getId(), v3.getId());
-    e4.setTransactionTime(Tuple2.of(0L, 0L));
+    e4.setTransactionTime(Tuple2.of(DEFAULT_TIME_FROM, DEFAULT_TIME_TO));
     e4.setValidTime(Tuple2.of(-120L, -107L));
     TemporalEdge e5 = edgeFactory.createEdge(v2.getId(), v4.getId());
     e5.setTransactionTime(Tuple2.of(10L, 50L));
@@ -139,11 +136,11 @@ public class AverageDurationTest extends GradoopFlinkTestBase {
         new AverageEdgeDuration("avgEdgeDurTx", TRANSACTION_TIME),
         new AverageEdgeDuration("avgEdgeDurValid", VALID_TIME));
     Properties headProperties = result.getGraphHead().collect().get(0).getProperties();
-    //assertEquals(18.5d, headProperties.get("avgDurTx").getDouble(), 1e-7d);
+    assertEquals(18.5d, headProperties.get("avgDurTx").getDouble(), 1e-7d);
     assertEquals(12.d, headProperties.get("avgDurValid").getDouble(), 1e-7d);
-    //assertEquals(2.d, headProperties.get("avgVertexDurTx").getDouble(), 1e-7d);
+    assertEquals(2.d, headProperties.get("avgVertexDurTx").getDouble(), 1e-7d);
     assertEquals(5.d, headProperties.get("avgVertexDurValid").getDouble(), 1e-7d);
-    //assertEquals(35.d, headProperties.get("avgEdgeDurTx").getDouble(), 1e-7d);
+    assertEquals(35.d, headProperties.get("avgEdgeDurTx").getDouble(), 1e-7d);
     assertEquals(19.d, headProperties.get("avgEdgeDurValid").getDouble(), 1e-7d);
   }
 }
