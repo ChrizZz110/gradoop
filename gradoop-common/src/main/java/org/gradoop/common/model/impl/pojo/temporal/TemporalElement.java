@@ -98,6 +98,9 @@ public abstract class TemporalElement extends Element implements EPGMElement {
     Objects.requireNonNull(transactionTime);
     Objects.requireNonNull(transactionTime.f0);
     Objects.requireNonNull(transactionTime.f1);
+    if (transactionTime.f0 > transactionTime.f1) {
+      throw new IllegalArgumentException("tx-from time can not be after tx-to time");
+    }
     this.transactionTime = transactionTime;
   }
 
@@ -118,6 +121,9 @@ public abstract class TemporalElement extends Element implements EPGMElement {
     Objects.requireNonNull(validTime);
     Objects.requireNonNull(validTime.f0);
     Objects.requireNonNull(validTime.f1);
+    if (validTime.f0 > validTime.f1) {
+      throw new IllegalArgumentException("valid-from time can not be after valid-to time");
+    }
     this.validTime = validTime;
   }
 

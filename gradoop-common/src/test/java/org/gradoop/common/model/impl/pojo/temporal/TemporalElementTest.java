@@ -15,12 +15,17 @@
  */
 package org.gradoop.common.model.impl.pojo.temporal;
 
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.gradoop.common.model.impl.id.GradoopId;
 import org.gradoop.common.model.impl.properties.Properties;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.withSettings;
 
 /**
  * Tests of class {@link TemporalElement}
@@ -78,5 +83,27 @@ public class TemporalElementTest {
     assertEquals(validTo, elementMock.getValidTo());
     assertTrue(elementMock.getTxFrom() <= System.currentTimeMillis());
     assertEquals((Long) Long.MAX_VALUE, elementMock.getTxTo());
+  }
+
+  /**
+   * Test {@link TemporalElement#setValidTime(Tuple2)} with an invalid interval.
+   */
+  @Test(expected = IllegalArgumentException.class)
+  public void testValidTimeSetterWithInvalidValues() {
+    TemporalElement elementMock = mock(TemporalElement.class, withSettings()
+      .useConstructor(GradoopId.get(), "", null, null, null)
+      .defaultAnswer(CALLS_REAL_METHODS));
+    elementMock.setValidTime(Tuple2.of(2L, 1L));
+  }
+
+  /**
+   * Test {@link TemporalElement#setTransactionTime(Tuple2)} with an invalid interval.
+   */
+  @Test(expected = IllegalArgumentException.class)
+  public void testTransactionTimeSetterWithInvalidValues() {
+    TemporalElement elementMock = mock(TemporalElement.class, withSettings()
+      .useConstructor(GradoopId.get(), "", null, null, null)
+      .defaultAnswer(CALLS_REAL_METHODS));
+    elementMock.setTransactionTime(Tuple2.of(2L, 1L));
   }
 }
