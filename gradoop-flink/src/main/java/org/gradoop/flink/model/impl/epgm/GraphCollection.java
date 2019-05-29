@@ -67,7 +67,7 @@ import org.gradoop.flink.model.impl.tpgm.TemporalGraphCollection;
 import org.gradoop.flink.util.GradoopFlinkConfig;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.Objects;
 
 /**
@@ -187,7 +187,7 @@ public class GraphCollection implements
 
     GradoopIdSet graphIds = new GradoopIdSet();
 
-    Collections.addAll(graphIds, identifiers);
+    graphIds.addAll(Arrays.asList(identifiers));
 
     return getGraphs(graphIds);
   }

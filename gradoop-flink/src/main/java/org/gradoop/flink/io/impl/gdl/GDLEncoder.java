@@ -151,8 +151,8 @@ public class GDLEncoder<
         boolean containedInGraph = v.getGraphIds().contains(gh.getId());
         boolean firstOccurrence = !usedVertexIds.contains(v.getId());
 
-        if (containedInGraph && firstOccurrence) {
-          String vertexString = vertexToGDLString(v, idToVertexName);
+        if (containedInGraph) {
+          String vertexString = vertexToGDLString(v, idToVertexName, firstOccurrence);
           usedVertexIds.add(v.getId());
           verticesString.append(vertexString).append(System.lineSeparator());
         }
@@ -170,7 +170,8 @@ public class GDLEncoder<
       result
         .append(graphHeadToGDLString(gh, idToGraphHeadName))
         .append(GRAPH_ELEMENTS_DEFINITION_START).append(System.lineSeparator())
-        .append(verticesString).append(System.lineSeparator())
+        .append(verticesString)
+        .append(edgesString.length() > 0 ? System.lineSeparator() : "")
         .append(edgesString)
         .append(GRAPH_ELEMENTS_DEFINITION_END)
         .append(System.lineSeparator()).append(System.lineSeparator());
@@ -247,13 +248,21 @@ public class GDLEncoder<
    * @param vertex The vertex that should be formatted.
    * @param idToVertexName Maps GradoopId of a vertex to a string that represents the gdl
    *                       variable name
+   * @param firstOccurrence Is it the first occurrence of the vertex in all graphs?
    * @return A GDL formatted vertex string.
    */
-  private String vertexToGDLString(V vertex, Map<GradoopId, String> idToVertexName)  {
-    return String.format("(%s:%s %s)",
-      idToVertexName.get(vertex.getId()),
-      vertex.getLabel(),
-      propertiesToGDLString(vertex.getProperties()));
+  private String vertexToGDLString(
+    V vertex,
+    Map<GradoopId, String> idToVertexName,
+    boolean firstOccurrence) {
+    if (firstOccurrence) {
+      return String.format("(%s:%s %s)",
+        idToVertexName.get(vertex.getId()),
+        vertex.getLabel(),
+        propertiesToGDLString(vertex.getProperties()));
+    } else {
+      return String.format("(%s)", idToVertexName.get(vertex.getId()));
+    }
   }
 
   /**
@@ -265,7 +274,7 @@ public class GDLEncoder<
    *                       variable name
    * @param idToEdgeName Maps GradoopId of an edge to a string that represents the GDL variable
    *                     name.
-   * @param firstOccurrence Is it the first occurrence of the vertex in all graphs?
+   * @param firstOccurrence Is it the first occurrence of the edge in all graphs?
    * @return A GDL formatted edge string.
    */
   private String edgeToGDLString(

@@ -44,7 +44,7 @@ public class AddToGraph<GE extends EPGMGraphElement, G extends EPGMGraphHead> im
   }
 
   @Override
-  public GE map(GE graphElement) throws Exception {
+  public GE map(GE graphElement) {
     graphElement.addGraphId(graphHeadId);
     return graphElement;
   }
