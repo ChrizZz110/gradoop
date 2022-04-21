@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+<rss version="0.91">
+  <channel>
+    <title>Gradoop Common - Checkstyle report</title>
+    <link>http://www.gradoop.org/gradoop-common</link>
+    <description>Gradoop Common - Checkstyle report</description>
+    <language>en-us</language>
+    <copyright>&#169;2014 - 2021 - 2022 University of Leipzig</copyright>
+    <item>
+      <title>File: 17,
+             Errors: 0,
+             Warnings: 0,
+             Infos: 0
+      </title>
+            <link>http://www.gradoop.org/gradoop-common/checkstyle.html</link>
+      <description>
+        <p>Click <a href="http://www.gradoop.org/gradoop-common/checkstyle.html">here</a> for the full Checkstyle report.</p>
+
+        <table summary="Files" boder="1">
+          <thead>
+            <tr>
+              <th>Files</th>
+              <th style="width:30px;"><abbr title="Info">I</abbr></th>
+              <th style="width:30px;"><abbr title="Warning">W</abbr></th>
+              <th style="width:30px;"><abbr title="Error">E</abbr></th>
+            </tr>
+          </thead>
+          <tbody>
+                          <tr>
+                <td>
+                  <a href="http://www.gradoop.org/gradoop-common/checkstyle.html#org.gradoop.common.model.impl.properties.PropertiesTest.java">org/gradoop/common/model/impl/properties/PropertiesTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://www.gradoop.org/gradoop-common/checkstyle.html#org.gradoop.common.model.impl.properties.PropertyValueUtilsTest.java">org/gradoop/common/model/impl/properties/PropertyValueUtilsTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://www.gradoop.org/gradoop-common/checkstyle.html#org.gradoop.common.model.impl.pojo.GraphElementTest.java">org/gradoop/common/model/impl/pojo/GraphElementTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://www.gradoop.org/gradoop-common/checkstyle.html#org.gradoop.common.model.impl.properties.PropertyValueListTest.java">org/gradoop/common/model/impl/properties/PropertyValueListTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://www.gradoop.org/gradoop-common/checkstyle.html#org.gradoop.common.model.impl.properties.PropertyValueTestProvider.java">org/gradoop/common/model/impl/properties/PropertyValueTestProvider.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://www.gradoop.org/gradoop-common/checkstyle.html#org.gradoop.common.model.impl.properties.PropertyTest.java">org/gradoop/common/model/impl/properties/PropertyTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://www.gradoop.org/gradoop-common/checkstyle.html#org.gradoop.common.util.AsciiGraphLoaderTest.java">org/gradoop/common/util/AsciiGraphLoaderTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://www.gradoop.org/gradoop-common/checkstyle.html#org.gradoop.common.model.impl.properties.bytes.Bytes.java">org/gradoop/common/model/impl/properties/bytes/Bytes.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://www.gradoop.org/gradoop-common/checkstyle.html#org.gradoop.common.model.impl.pojo.VertexTest.java">org/gradoop/common/model/impl/pojo/VertexTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://www.gradoop.org/gradoop-common/checkstyle.html#org.gradoop.common.model.impl.pojo.ElementTest.java">org/gradoop/common/model/impl/pojo/ElementTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://www.gradoop.org/gradoop-common/checkstyle.html#org.gradoop.common.GradoopTestUtils.java">org/gradoop/common/GradoopTestUtils.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://www.gradoop.org/gradoop-common/checkstyle.html#org.gradoop.common.model.impl.metadata.MetaDataTest.java">org/gradoop/common/model/impl/metadata/MetaDataTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://www.gradoop.org/gradoop-common/checkstyle.html#org.gradoop.common.model.impl.pojo.EdgeTest.java">org/gradoop/common/model/impl/pojo/EdgeTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://www.gradoop.org/gradoop-common/checkstyle.html#org.gradoop.common.model.impl.properties.PropertyValueTest.java">org/gradoop/common/model/impl/properties/PropertyValueTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://www.gradoop.org/gradoop-common/checkstyle.html#org.gradoop.common.model.impl.id.GradoopIdTest.java">org/gradoop/common/model/impl/id/GradoopIdTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://www.gradoop.org/gradoop-common/checkstyle.html#org.gradoop.common.model.impl.id.GradoopIdsTest.java">org/gradoop/common/model/impl/id/GradoopIdsTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://www.gradoop.org/gradoop-common/checkstyle.html#org.gradoop.common.model.impl.pojo.GraphHeadTest.java">org/gradoop/common/model/impl/pojo/GraphHeadTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                      </tbody>
+        </table>
+        
+      </description>
+    </item>
+  </channel>
+</rss>
+

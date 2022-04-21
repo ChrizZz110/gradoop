@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DateStrategy.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Gradoop Common</a> &gt; <a href="index.source.html" class="el_package">org.gradoop.common.model.impl.properties.strategies</a> &gt; <span class="el_source">DateStrategy.java</span></div><h1>DateStrategy.java</h1><pre class="source lang-java linenums">/*
+ * Copyright © 2014 - 2021 Leipzig University (Database Research Group)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradoop.common.model.impl.properties.strategies;
+
+import org.apache.flink.core.memory.DataInputView;
+import org.gradoop.common.model.impl.properties.bytes.Bytes;
+import org.gradoop.common.model.impl.properties.DateTimeSerializer;
+import org.gradoop.common.model.impl.properties.PropertyValue;
+import org.gradoop.common.model.impl.properties.Type;
+
+import java.io.IOException;
+import java.time.LocalDate;
+import java.util.Arrays;
+
+/**
+ * Strategy class for handling {@code PropertyValue} operations with a value of the type
+ * {@code LocalDate}.
+ */
+<span class="fc" id="L32">public class DateStrategy extends AbstractFixSizedPropertyValueStrategy&lt;LocalDate&gt; {</span>
+
+  @Override
+  public LocalDate read(DataInputView inputView, byte typeByte) throws IOException {
+<span class="fc" id="L36">    int length = DateTimeSerializer.SIZEOF_DATE;</span>
+<span class="fc" id="L37">    byte[] rawBytes = new byte[length];</span>
+
+<span class="fc bfc" id="L39" title="All 2 branches covered.">    for (int i  = 0; i &lt; rawBytes.length; i++) {</span>
+<span class="fc" id="L40">      rawBytes[i] = inputView.readByte();</span>
+    }
+
+<span class="fc" id="L43">    return DateTimeSerializer.deserializeDate(rawBytes);</span>
+  }
+
+  @Override
+  public int compare(LocalDate value, Object other) {
+<span class="pc bpc" id="L48" title="1 of 2 branches missed.">    if (other instanceof LocalDate) {</span>
+<span class="fc" id="L49">      return value.compareTo((LocalDate) other);</span>
+    }
+<span class="nc" id="L51">    throw new IllegalArgumentException(String.format(</span>
+<span class="nc" id="L52">      &quot;Incompatible types: %s, %s&quot;, value.getClass(), other.getClass()));</span>
+  }
+
+  @Override
+  public boolean is(Object value) {
+<span class="fc" id="L57">    return value instanceof LocalDate;</span>
+  }
+
+  @Override
+  public Class&lt;LocalDate&gt; getType() {
+<span class="fc" id="L62">    return LocalDate.class;</span>
+  }
+
+  @Override
+  public LocalDate get(byte[] bytes) {
+<span class="fc" id="L67">    return DateTimeSerializer.deserializeDate(</span>
+<span class="fc" id="L68">      Arrays.copyOfRange(</span>
+        bytes, PropertyValue.OFFSET, DateTimeSerializer.SIZEOF_DATE + PropertyValue.OFFSET
+      ));
+  }
+
+  @Override
+  public byte getRawType() {
+<span class="fc" id="L75">    return Type.DATE.getTypeByte();</span>
+  }
+
+  @Override
+  public byte[] getRawBytes(LocalDate value) {
+<span class="fc" id="L80">    byte[] valueBytes = DateTimeSerializer.serializeDate(value);</span>
+<span class="fc" id="L81">    byte[] rawBytes = new byte[PropertyValue.OFFSET + DateTimeSerializer.SIZEOF_DATE];</span>
+<span class="fc" id="L82">    rawBytes[0] = getRawType();</span>
+<span class="fc" id="L83">    Bytes.putBytes(rawBytes, PropertyValue.OFFSET, valueBytes, 0, valueBytes.length);</span>
+<span class="fc" id="L84">    return rawBytes;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RandomNonUniformVertexSampling.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Gradoop Flink</a> &gt; <a href="index.source.html" class="el_package">org.gradoop.flink.model.impl.operators.sampling</a> &gt; <span class="el_source">RandomNonUniformVertexSampling.java</span></div><h1>RandomNonUniformVertexSampling.java</h1><pre class="source lang-java linenums">/*
+ * Copyright © 2014 - 2021 Leipzig University (Database Research Group)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradoop.flink.model.impl.operators.sampling;
+
+import org.apache.flink.api.java.DataSet;
+import org.gradoop.common.model.api.entities.Edge;
+import org.gradoop.common.model.api.entities.GraphHead;
+import org.gradoop.common.model.api.entities.Vertex;
+import org.gradoop.flink.algorithms.gelly.vertexdegrees.DistinctVertexDegrees;
+import org.gradoop.flink.model.api.epgm.BaseGraph;
+import org.gradoop.flink.model.api.epgm.BaseGraphCollection;
+import org.gradoop.flink.model.impl.functions.epgm.PropertyRemover;
+import org.gradoop.flink.model.impl.operators.sampling.common.SamplingConstants;
+import org.gradoop.flink.model.impl.operators.sampling.functions.AddMaxDegreeCrossFunction;
+import org.gradoop.flink.model.impl.operators.sampling.functions.NonUniformVertexRandomFilter;
+import org.gradoop.flink.model.impl.operators.sampling.functions.VertexToDegreeMap;
+
+/**
+ * Computes a vertex sampling of the graph (new graph head will be generated). Retains randomly
+ * chosen vertices of a given relative amount and all edges which source- and target-vertices
+ * were chosen. A degree-dependent value is taken into account to have a bias towards high-degree
+ * vertices. There may retain some unconnected vertices in the sampled graph.
+ *
+ * @param &lt;G&gt;  The graph head type.
+ * @param &lt;V&gt;  The vertex type.
+ * @param &lt;E&gt;  The edge type.
+ * @param &lt;LG&gt; The type of the graph.
+ * @param &lt;GC&gt; The type of the graph collection.
+ */
+public class RandomNonUniformVertexSampling&lt;
+  G extends GraphHead,
+  V extends Vertex,
+  E extends Edge,
+  LG extends BaseGraph&lt;G, V, E, LG, GC&gt;,
+  GC extends BaseGraphCollection&lt;G, V, E, LG, GC&gt;&gt; extends SamplingAlgorithm&lt;G, V, E, LG, GC&gt; {
+
+  /**
+   * Relative amount of vertices in the result graph
+   */
+  private final float sampleSize;
+
+  /**
+   * Seed for the random number generator
+   * If seed is 0, the random generator is created without seed
+   */
+  private final long randomSeed;
+
+  /**
+   * Creates new RandomNonUniformVertexSampling instance.
+   *
+   * @param sampleSize relative sample size
+   */
+  public RandomNonUniformVertexSampling(float sampleSize) {
+<span class="nc" id="L67">    this(sampleSize, 0L);</span>
+<span class="nc" id="L68">  }</span>
+
+  /**
+   * Creates new RandomNonUniformVertexSampling instance.
+   *
+   * @param sampleSize relative sample size
+   * @param randomSeed random seed value (can be 0)
+   */
+<span class="fc" id="L76">  public RandomNonUniformVertexSampling(float sampleSize, long randomSeed) {</span>
+<span class="fc" id="L77">    this.sampleSize = sampleSize;</span>
+<span class="fc" id="L78">    this.randomSeed = randomSeed;</span>
+<span class="fc" id="L79">  }</span>
+
+  @Override
+  public LG sample(LG graph) {
+
+<span class="fc" id="L84">    graph = graph.callForGraph(new DistinctVertexDegrees&lt;&gt;(</span>
+      SamplingConstants.DEGREE_PROPERTY_KEY,
+      SamplingConstants.IN_DEGREE_PROPERTY_KEY,
+      SamplingConstants.OUT_DEGREE_PROPERTY_KEY,
+      true));
+
+<span class="fc" id="L90">    DataSet&lt;V&gt; newVertices = graph.getVertices()</span>
+<span class="fc" id="L91">      .map(new VertexToDegreeMap&lt;&gt;(SamplingConstants.DEGREE_PROPERTY_KEY))</span>
+<span class="fc" id="L92">      .max(0)</span>
+<span class="fc" id="L93">      .cross(graph.getVertices())</span>
+<span class="fc" id="L94">      .with(new AddMaxDegreeCrossFunction&lt;&gt;(SamplingConstants.PROPERTY_KEY_MAX_DEGREE));</span>
+
+<span class="fc" id="L96">    graph = graph.getFactory()</span>
+<span class="fc" id="L97">      .fromDataSets(graph.getGraphHead(), newVertices, graph.getEdges());</span>
+
+<span class="fc" id="L99">    newVertices = graph.getVertices().filter(new NonUniformVertexRandomFilter&lt;&gt;(</span>
+      sampleSize,
+      randomSeed,
+      SamplingConstants.DEGREE_PROPERTY_KEY,
+      SamplingConstants.PROPERTY_KEY_MAX_DEGREE));
+
+<span class="fc" id="L105">    newVertices = newVertices</span>
+<span class="fc" id="L106">      .map(new PropertyRemover&lt;&gt;(SamplingConstants.DEGREE_PROPERTY_KEY))</span>
+<span class="fc" id="L107">      .map(new PropertyRemover&lt;&gt;(SamplingConstants.IN_DEGREE_PROPERTY_KEY))</span>
+<span class="fc" id="L108">      .map(new PropertyRemover&lt;&gt;(SamplingConstants.OUT_DEGREE_PROPERTY_KEY))</span>
+<span class="fc" id="L109">      .map(new PropertyRemover&lt;&gt;(SamplingConstants.PROPERTY_KEY_MAX_DEGREE));</span>
+
+<span class="fc" id="L111">    return graph.getFactory().fromDataSets(newVertices, graph.getEdges()).verify();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

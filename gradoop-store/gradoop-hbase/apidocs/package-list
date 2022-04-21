@@ -1,0 +1,15 @@
+org.gradoop.storage.hbase.config
+org.gradoop.storage.hbase.impl
+org.gradoop.storage.hbase.impl.api
+org.gradoop.storage.hbase.impl.constants
+org.gradoop.storage.hbase.impl.factory
+org.gradoop.storage.hbase.impl.handler
+org.gradoop.storage.hbase.impl.io
+org.gradoop.storage.hbase.impl.io.functions
+org.gradoop.storage.hbase.impl.io.inputformats
+org.gradoop.storage.hbase.impl.iterator
+org.gradoop.storage.hbase.impl.predicate.filter
+org.gradoop.storage.hbase.impl.predicate.filter.api
+org.gradoop.storage.hbase.impl.predicate.filter.calculate
+org.gradoop.storage.hbase.impl.predicate.filter.impl
+org.gradoop.storage.hbase.utils

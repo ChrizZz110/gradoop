@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FlinkAsciiGraphLoader.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Gradoop Flink</a> &gt; <a href="index.source.html" class="el_package">org.gradoop.flink.util</a> &gt; <span class="el_source">FlinkAsciiGraphLoader.java</span></div><h1>FlinkAsciiGraphLoader.java</h1><pre class="source lang-java linenums">/*
+ * Copyright © 2014 - 2021 Leipzig University (Database Research Group)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradoop.flink.util;
+
+import org.apache.flink.api.java.DataSet;
+import org.apache.flink.api.java.ExecutionEnvironment;
+import org.gradoop.common.model.impl.pojo.EPGMEdge;
+import org.gradoop.common.model.impl.pojo.EPGMGraphHead;
+import org.gradoop.common.model.impl.pojo.EPGMVertex;
+import org.gradoop.common.util.AsciiGraphLoader;
+import org.gradoop.common.util.GradoopConstants;
+import org.gradoop.flink.model.impl.epgm.GraphCollection;
+import org.gradoop.flink.model.impl.epgm.LogicalGraph;
+import org.gradoop.flink.model.impl.epgm.LogicalGraphFactory;
+import org.gradoop.flink.model.impl.functions.epgm.RenameLabel;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Collection;
+
+/**
+ * Used the {@link AsciiGraphLoader} to generate instances of
+ * {@link LogicalGraph} and {@link GraphCollection} from GDL.
+ *
+ * @see &lt;a href=&quot;https://github.com/dbs-leipzig/gdl&quot;&gt;GDL on GitHub&lt;/a&gt;
+ */
+public class FlinkAsciiGraphLoader {
+
+  /**
+   * Gradoop Flink configuration
+   */
+  private final GradoopFlinkConfig config;
+
+  /**
+   * AsciiGraphLoader to create graph, vertex and edge collections.
+   */
+  private AsciiGraphLoader&lt;EPGMGraphHead, EPGMVertex, EPGMEdge&gt; loader;
+
+  /**
+   * Creates a new FlinkAsciiGraphLoader instance.
+   *
+   * @param config Gradoop Flink configuration
+   */
+<span class="fc" id="L57">  public FlinkAsciiGraphLoader(GradoopFlinkConfig config) {</span>
+<span class="pc bpc" id="L58" title="1 of 2 branches missed.">    if (config == null) {</span>
+<span class="nc" id="L59">      throw new IllegalArgumentException(&quot;Config must not be null.&quot;);</span>
+    }
+<span class="fc" id="L61">    this.config = config;</span>
+<span class="fc" id="L62">  }</span>
+
+  /**
+   * Initializes the database from the given ASCII GDL string.
+   *
+   * @param asciiGraphs GDL string (must not be {@code null})
+   */
+  public void initDatabaseFromString(String asciiGraphs) {
+<span class="pc bpc" id="L70" title="1 of 2 branches missed.">    if (asciiGraphs == null) {</span>
+<span class="nc" id="L71">      throw new IllegalArgumentException(&quot;AsciiGraph must not be null&quot;);</span>
+    }
+<span class="fc" id="L73">    loader = AsciiGraphLoader.fromString(asciiGraphs, config.getLogicalGraphFactory());</span>
+<span class="fc" id="L74">  }</span>
+
+  /**
+   * Initializes the database from the given ASCII GDL stream.
+   *
+   * @param stream GDL stream
+   * @throws IOException on failure
+   */
+  public void initDatabaseFromStream(InputStream stream) throws IOException {
+<span class="pc bpc" id="L83" title="1 of 2 branches missed.">    if (stream == null) {</span>
+<span class="nc" id="L84">      throw new IllegalArgumentException(&quot;AsciiGraph must not be null&quot;);</span>
+    }
+<span class="fc" id="L86">    loader = AsciiGraphLoader.fromStream(stream, config.getLogicalGraphFactory());</span>
+<span class="fc" id="L87">  }</span>
+
+  /**
+   * Appends the given ASCII GDL String to the database.
+   *
+   * Variables previously used can be reused as their refer to the same objects.
+   *
+   * @param asciiGraph GDL string (must not be {@code null})
+   */
+  public void appendToDatabaseFromString(String asciiGraph) {
+<span class="pc bpc" id="L97" title="1 of 2 branches missed.">    if (asciiGraph == null) {</span>
+<span class="nc" id="L98">      throw new IllegalArgumentException(&quot;AsciiGraph must not be null&quot;);</span>
+    }
+<span class="pc bpc" id="L100" title="1 of 2 branches missed.">    if (loader != null) {</span>
+<span class="fc" id="L101">      loader.appendFromString(asciiGraph);</span>
+    } else {
+<span class="nc" id="L103">      initDatabaseFromString(asciiGraph);</span>
+    }
+<span class="fc" id="L105">  }</span>
+
+  /**
+   * Initializes the database from the given GDL file.
+   *
+   * @param fileName GDL file name (must not be {@code null})
+   * @throws IOException on failure
+   */
+  public void initDatabaseFromFile(String fileName) throws IOException {
+<span class="pc bpc" id="L114" title="1 of 2 branches missed.">    if (fileName == null) {</span>
+<span class="nc" id="L115">      throw new IllegalArgumentException(&quot;FileName must not be null.&quot;);</span>
+    }
+<span class="fc" id="L117">    loader = AsciiGraphLoader.fromFile(fileName, config.getLogicalGraphFactory());</span>
+<span class="fc" id="L118">  }</span>
+
+  /**
+   * Returns a logical graph containing the complete vertex and edge space of
+   * the database.
+   * This is equivalent to {@link #getLogicalGraph(boolean) getLogicalGraph(true)}.
+   *
+   * @return logical graph of vertex and edge space
+   */
+  public LogicalGraph getLogicalGraph() {
+<span class="fc" id="L128">    return getLogicalGraph(true);</span>
+  }
+
+  /**
+   * Returns a logical graph containing the complete vertex and edge space of
+   * the database.
+   *
+   * @param withGraphContainment true, if vertices and edges shall be updated to
+   *                             be contained in the logical graph representing
+   *                             the database
+   * @return logical graph of vertex and edge space
+   */
+  public LogicalGraph getLogicalGraph(boolean withGraphContainment) {
+<span class="fc" id="L141">    final LogicalGraphFactory factory = config.getLogicalGraphFactory();</span>
+<span class="fc bfc" id="L142" title="All 2 branches covered.">    if (withGraphContainment) {</span>
+<span class="fc" id="L143">      return factory.fromCollections(getVertices(), getEdges())</span>
+<span class="fc" id="L144">        .transformGraphHead(new RenameLabel&lt;&gt;(GradoopConstants.DEFAULT_GRAPH_LABEL,</span>
+          GradoopConstants.DB_GRAPH_LABEL));
+    } else {
+<span class="fc" id="L147">      EPGMGraphHead graphHead = factory.getGraphHeadFactory()</span>
+<span class="fc" id="L148">        .createGraphHead(GradoopConstants.DB_GRAPH_LABEL);</span>
+<span class="fc" id="L149">      return factory.fromCollections(graphHead, getVertices(), getEdges());</span>
+    }
+  }
+
+  /**
+   * Builds a {@link LogicalGraph} from the graph referenced by the given
+   * graph variable.
+   *
+   * @param variable graph variable used in GDL script
+   * @return LogicalGraph
+   */
+  public LogicalGraph getLogicalGraphByVariable(String variable) {
+<span class="fc" id="L161">    EPGMGraphHead graphHead = getGraphHeadByVariable(variable);</span>
+<span class="fc" id="L162">    Collection&lt;EPGMVertex&gt; vertices = getVerticesByGraphVariables(variable);</span>
+<span class="fc" id="L163">    Collection&lt;EPGMEdge&gt; edges = getEdgesByGraphVariables(variable);</span>
+
+<span class="fc" id="L165">    return config.getLogicalGraphFactory().fromCollections(graphHead, vertices, edges);</span>
+  }
+
+  /**
+   * Returns a collection of all logical graph contained in the database.
+   *
+   * @return collection of all logical graphs
+   */
+  public GraphCollection getGraphCollection() {
+<span class="fc" id="L174">    ExecutionEnvironment env = config.getExecutionEnvironment();</span>
+
+<span class="fc" id="L176">    DataSet&lt;EPGMVertex&gt; newVertices = env.fromCollection(getVertices())</span>
+<span class="fc bfc" id="L177" title="All 2 branches covered.">      .filter(vertex -&gt; vertex.getGraphCount() &gt; 0);</span>
+<span class="fc" id="L178">    DataSet&lt;EPGMEdge&gt; newEdges = env.fromCollection(getEdges())</span>
+<span class="fc bfc" id="L179" title="All 2 branches covered.">      .filter(edge -&gt; edge.getGraphCount() &gt; 0);</span>
+
+<span class="fc" id="L181">    return config.getGraphCollectionFactory()</span>
+<span class="fc" id="L182">      .fromDataSets(env.fromCollection(getGraphHeads()), newVertices, newEdges);</span>
+  }
+
+  /**
+   * Builds a {@link GraphCollection} from the graph referenced by the given
+   * graph variables.
+   *
+   * @param variables graph variables used in GDL script
+   * @return GraphCollection
+   */
+  public GraphCollection getGraphCollectionByVariables(String... variables) {
+<span class="fc" id="L193">    Collection&lt;EPGMGraphHead&gt; graphHeads = getGraphHeadsByVariables(variables);</span>
+<span class="fc" id="L194">    Collection&lt;EPGMVertex&gt; vertices = getVerticesByGraphVariables(variables);</span>
+<span class="fc" id="L195">    Collection&lt;EPGMEdge&gt; edges = getEdgesByGraphVariables(variables);</span>
+
+<span class="fc" id="L197">    return config.getGraphCollectionFactory().fromCollections(graphHeads, vertices, edges);</span>
+  }
+
+  /**
+   * Returns all GraphHeads contained in the ASCII graph.
+   *
+   * @return graphHeads
+   */
+  public Collection&lt;EPGMGraphHead&gt; getGraphHeads() {
+<span class="fc" id="L206">    return loader.getGraphHeads();</span>
+  }
+
+  /**
+   * Returns GraphHead by given variable.
+   *
+   * @param variable variable used in GDL script
+   * @return graphHead or {@code null} if graph is not cached
+   */
+  public EPGMGraphHead getGraphHeadByVariable(String variable) {
+<span class="fc" id="L216">    return loader.getGraphHeadByVariable(variable);</span>
+  }
+
+  /**
+   * Returns the graph heads assigned to the specified variables.
+   *
+   * @param variables variables used in the GDL script
+   * @return graphHeads assigned to the variables
+   */
+  public Collection&lt;EPGMGraphHead&gt; getGraphHeadsByVariables(String... variables) {
+<span class="fc" id="L226">    return loader.getGraphHeadsByVariables(variables);</span>
+  }
+
+  /**
+   * Returns all vertices contained in the ASCII graph.
+   *
+   * @return vertices
+   */
+  public Collection&lt;EPGMVertex&gt; getVertices() {
+<span class="fc" id="L235">    return loader.getVertices();</span>
+  }
+
+  /**
+   * Returns all vertices that belong to the given graph variables.
+   *
+   * @param variables graph variables used in the GDL script
+   * @return vertices that are contained in the graphs
+   */
+  public Collection&lt;EPGMVertex&gt; getVerticesByGraphVariables(String... variables) {
+<span class="fc" id="L245">    return loader.getVerticesByGraphVariables(variables);</span>
+  }
+
+  /**
+   * Returns the vertex which is identified by the given variable. If the
+   * variable cannot be found, the method returns {@code null}.
+   *
+   * @param variable vertex variable
+   * @return vertex or {@code null} if variable is not used
+   */
+  public EPGMVertex getVertexByVariable(String variable) {
+<span class="fc" id="L256">    return loader.getVertexByVariable(variable);</span>
+  }
+
+  /**
+   * Returns all edges contained in the ASCII graph.
+   *
+   * @return edges
+   */
+  public Collection&lt;EPGMEdge&gt; getEdges() {
+<span class="fc" id="L265">    return loader.getEdges();</span>
+  }
+
+  /**
+   * Returns all edges that belong to the given graph variables.
+   *
+   * @param variables graph variables used in the GDL script
+   * @return edges
+   */
+  public Collection&lt;EPGMEdge&gt; getEdgesByGraphVariables(String... variables) {
+<span class="fc" id="L275">    return loader.getEdgesByGraphVariables(variables);</span>
+  }
+
+  /**
+   * Returns the edge which is identified by the given variable. If the
+   * variable cannot be found, the method returns {@code null}.
+   *
+   * @param variable edge variable
+   * @return edge or {@code null} if variable is not used
+   */
+  public EPGMEdge getEdgeByVariable(String variable) {
+<span class="fc" id="L286">    return loader.getEdgeByVariable(variable);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

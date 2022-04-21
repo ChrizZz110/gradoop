@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GVEGraphLayoutFactory.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Gradoop Flink</a> &gt; <a href="index.source.html" class="el_package">org.gradoop.flink.model.impl.layouts.gve</a> &gt; <span class="el_source">GVEGraphLayoutFactory.java</span></div><h1>GVEGraphLayoutFactory.java</h1><pre class="source lang-java linenums">/*
+ * Copyright © 2014 - 2021 Leipzig University (Database Research Group)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradoop.flink.model.impl.layouts.gve;
+
+import com.google.common.collect.Lists;
+import org.apache.flink.api.java.DataSet;
+import org.gradoop.common.model.impl.pojo.EPGMEdge;
+import org.gradoop.common.model.impl.pojo.EPGMGraphHead;
+import org.gradoop.common.model.impl.pojo.EPGMVertex;
+import org.gradoop.flink.model.api.layouts.LogicalGraphLayout;
+import org.gradoop.flink.model.api.layouts.LogicalGraphLayoutFactory;
+import org.gradoop.flink.model.impl.functions.graphcontainment.AddToGraph;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+/**
+ * Responsible for creating a {@link GVELayout} from given data.
+ */
+<span class="fc" id="L36">public class GVEGraphLayoutFactory extends GVEBaseFactory</span>
+  implements LogicalGraphLayoutFactory&lt;EPGMGraphHead, EPGMVertex, EPGMEdge&gt; {
+
+  @Override
+  public GVELayout fromDataSets(DataSet&lt;EPGMVertex&gt; vertices) {
+<span class="fc" id="L41">    return fromDataSets(vertices, createEdgeDataSet(Lists.newArrayListWithCapacity(0)));</span>
+  }
+
+  @Override
+  public GVELayout fromDataSets(DataSet&lt;EPGMVertex&gt; vertices, DataSet&lt;EPGMEdge&gt; edges) {
+<span class="fc" id="L46">    Objects.requireNonNull(vertices, &quot;EPGMVertex DataSet was null&quot;);</span>
+<span class="fc" id="L47">    Objects.requireNonNull(edges, &quot;EPGMEdge DataSet was null&quot;);</span>
+<span class="fc" id="L48">    EPGMGraphHead graphHead = getGraphHeadFactory().createGraphHead();</span>
+
+<span class="fc" id="L50">    DataSet&lt;EPGMGraphHead&gt; graphHeadSet = getConfig().getExecutionEnvironment()</span>
+<span class="fc" id="L51">      .fromElements(graphHead);</span>
+
+    // update vertices and edges with new graph head id
+<span class="fc" id="L54">    vertices = vertices</span>
+<span class="fc" id="L55">      .map(new AddToGraph&lt;&gt;(graphHead))</span>
+<span class="fc" id="L56">      .withForwardedFields(&quot;id;label;properties&quot;);</span>
+<span class="fc" id="L57">    edges = edges</span>
+<span class="fc" id="L58">      .map(new AddToGraph&lt;&gt;(graphHead))</span>
+<span class="fc" id="L59">      .withForwardedFields(&quot;id;sourceId;targetId;label;properties&quot;);</span>
+
+<span class="fc" id="L61">    return new GVELayout(graphHeadSet, vertices, edges);</span>
+  }
+
+  @Override
+  public LogicalGraphLayout&lt;EPGMGraphHead, EPGMVertex, EPGMEdge&gt; fromDataSets(
+    DataSet&lt;EPGMGraphHead&gt; graphHead, DataSet&lt;EPGMVertex&gt; vertices, DataSet&lt;EPGMEdge&gt; edges) {
+<span class="fc" id="L67">    return create(graphHead, vertices, edges);</span>
+  }
+
+  @Override
+  public LogicalGraphLayout&lt;EPGMGraphHead, EPGMVertex, EPGMEdge&gt; fromIndexedDataSets(
+    Map&lt;String, DataSet&lt;EPGMGraphHead&gt;&gt; graphHeads,
+    Map&lt;String, DataSet&lt;EPGMVertex&gt;&gt; vertices,
+    Map&lt;String, DataSet&lt;EPGMEdge&gt;&gt; edges) {
+<span class="fc" id="L75">    return create(graphHeads, vertices, edges);</span>
+  }
+
+  @Override
+  public LogicalGraphLayout&lt;EPGMGraphHead, EPGMVertex, EPGMEdge&gt; fromCollections(
+    EPGMGraphHead graphHead,
+    Collection&lt;EPGMVertex&gt; vertices,
+    Collection&lt;EPGMEdge&gt; edges) {
+
+<span class="fc" id="L84">    Objects.requireNonNull(vertices, &quot;EPGMVertex collection was null&quot;);</span>
+
+    List&lt;EPGMGraphHead&gt; graphHeads;
+<span class="fc bfc" id="L87" title="All 2 branches covered.">    if (graphHead == null) {</span>
+<span class="fc" id="L88">      graphHeads = Lists.newArrayListWithCapacity(0);</span>
+    } else {
+<span class="fc" id="L90">      graphHeads = Lists.newArrayList(graphHead);</span>
+    }
+<span class="pc bpc" id="L92" title="1 of 2 branches missed.">    if (edges == null) {</span>
+<span class="nc" id="L93">      edges = Lists.newArrayListWithCapacity(0);</span>
+    }
+
+<span class="fc" id="L96">    return fromDataSets(</span>
+<span class="fc" id="L97">      createGraphHeadDataSet(graphHeads),</span>
+<span class="fc" id="L98">      createVertexDataSet(vertices),</span>
+<span class="fc" id="L99">      createEdgeDataSet(edges));</span>
+  }
+
+  @Override
+  public LogicalGraphLayout&lt;EPGMGraphHead, EPGMVertex, EPGMEdge&gt; fromCollections(
+    Collection&lt;EPGMVertex&gt; vertices, Collection&lt;EPGMEdge&gt; edges) {
+<span class="fc" id="L105">    Objects.requireNonNull(vertices, &quot;EPGMVertex collection was null&quot;);</span>
+<span class="fc" id="L106">    Objects.requireNonNull(edges, &quot;EPGMEdge collection was null&quot;);</span>
+<span class="fc" id="L107">    return fromDataSets(createVertexDataSet(vertices), createEdgeDataSet(edges));</span>
+  }
+
+  @Override
+  public LogicalGraphLayout&lt;EPGMGraphHead, EPGMVertex, EPGMEdge&gt; createEmptyGraph() {
+<span class="fc" id="L112">    Collection&lt;EPGMVertex&gt; vertices = new ArrayList&lt;&gt;(0);</span>
+<span class="fc" id="L113">    Collection&lt;EPGMEdge&gt; edges = new ArrayList&lt;&gt;(0);</span>
+<span class="fc" id="L114">    return fromCollections(null, vertices, edges);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

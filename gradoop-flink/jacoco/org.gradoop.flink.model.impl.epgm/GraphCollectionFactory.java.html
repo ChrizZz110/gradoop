@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GraphCollectionFactory.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Gradoop Flink</a> &gt; <a href="index.source.html" class="el_package">org.gradoop.flink.model.impl.epgm</a> &gt; <span class="el_source">GraphCollectionFactory.java</span></div><h1>GraphCollectionFactory.java</h1><pre class="source lang-java linenums">/*
+ * Copyright © 2014 - 2021 Leipzig University (Database Research Group)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradoop.flink.model.impl.epgm;
+
+import org.apache.flink.api.common.functions.GroupReduceFunction;
+import org.apache.flink.api.java.DataSet;
+import org.gradoop.common.model.api.entities.EdgeFactory;
+import org.gradoop.common.model.api.entities.GraphHeadFactory;
+import org.gradoop.common.model.api.entities.VertexFactory;
+import org.gradoop.common.model.impl.pojo.EPGMEdge;
+import org.gradoop.common.model.impl.pojo.EPGMGraphHead;
+import org.gradoop.common.model.impl.pojo.EPGMVertex;
+import org.gradoop.flink.model.api.epgm.BaseGraphCollectionFactory;
+import org.gradoop.flink.model.api.layouts.GraphCollectionLayout;
+import org.gradoop.flink.model.api.layouts.GraphCollectionLayoutFactory;
+import org.gradoop.flink.model.api.layouts.LogicalGraphLayout;
+import org.gradoop.flink.model.impl.functions.epgm.Id;
+import org.gradoop.flink.model.impl.layouts.transactional.tuples.GraphTransaction;
+import org.gradoop.flink.util.GradoopFlinkConfig;
+
+import java.util.Collection;
+import java.util.Map;
+import java.util.Objects;
+
+/**
+ * Responsible for creating instances of {@link GraphCollection} based on a specific
+ * {@link GraphCollectionLayout}.
+ */
+public class GraphCollectionFactory implements
+  BaseGraphCollectionFactory&lt;EPGMGraphHead, EPGMVertex, EPGMEdge, LogicalGraph, GraphCollection&gt; {
+  /**
+   * Creates the layout from given data.
+   */
+  private GraphCollectionLayoutFactory&lt;EPGMGraphHead, EPGMVertex, EPGMEdge&gt; layoutFactory;
+
+  /**
+   * The Gradoop Flink configuration.
+   */
+  private final GradoopFlinkConfig config;
+
+  /**
+   * Creates a new factory.
+   *
+   * @param config Gradoop Flink configuration
+   */
+<span class="fc" id="L59">  public GraphCollectionFactory(GradoopFlinkConfig config) {</span>
+<span class="fc" id="L60">    this.config = config;</span>
+<span class="fc" id="L61">  }</span>
+
+  @Override
+  public GraphCollectionLayoutFactory&lt;EPGMGraphHead, EPGMVertex, EPGMEdge&gt; getLayoutFactory() {
+<span class="nc" id="L65">    return layoutFactory;</span>
+  }
+
+  @Override
+  public void setLayoutFactory(
+    GraphCollectionLayoutFactory&lt;EPGMGraphHead, EPGMVertex, EPGMEdge&gt; layoutFactory) {
+<span class="fc" id="L71">    Objects.requireNonNull(layoutFactory);</span>
+<span class="fc" id="L72">    this.layoutFactory = layoutFactory;</span>
+<span class="fc" id="L73">    this.layoutFactory.setGradoopFlinkConfig(config);</span>
+<span class="fc" id="L74">  }</span>
+
+  @Override
+  public GraphHeadFactory&lt;EPGMGraphHead&gt; getGraphHeadFactory() {
+<span class="fc" id="L78">    return layoutFactory.getGraphHeadFactory();</span>
+  }
+
+  @Override
+  public VertexFactory&lt;EPGMVertex&gt; getVertexFactory() {
+<span class="fc" id="L83">    return layoutFactory.getVertexFactory();</span>
+  }
+
+  @Override
+  public EdgeFactory&lt;EPGMEdge&gt; getEdgeFactory() {
+<span class="fc" id="L88">    return layoutFactory.getEdgeFactory();</span>
+  }
+
+  @Override
+  public GraphCollection fromDataSets(DataSet&lt;EPGMGraphHead&gt; graphHeads,
+    DataSet&lt;EPGMVertex&gt; vertices) {
+<span class="fc" id="L94">    return new GraphCollection(layoutFactory.fromDataSets(graphHeads, vertices), config);</span>
+  }
+
+  @Override
+  public GraphCollection fromDataSets(DataSet&lt;EPGMGraphHead&gt; graphHeads, DataSet&lt;EPGMVertex&gt; vertices,
+    DataSet&lt;EPGMEdge&gt; edges) {
+<span class="fc" id="L100">    return new GraphCollection(layoutFactory.fromDataSets(graphHeads, vertices, edges), config);</span>
+  }
+
+  @Override
+  public GraphCollection fromIndexedDataSets(Map&lt;String, DataSet&lt;EPGMGraphHead&gt;&gt; graphHeads,
+    Map&lt;String, DataSet&lt;EPGMVertex&gt;&gt; vertices, Map&lt;String, DataSet&lt;EPGMEdge&gt;&gt; edges) {
+<span class="fc" id="L106">    GraphCollectionLayout&lt;EPGMGraphHead, EPGMVertex, EPGMEdge&gt; layout = layoutFactory</span>
+<span class="fc" id="L107">      .fromIndexedDataSets(graphHeads, vertices, edges);</span>
+<span class="fc" id="L108">    return new GraphCollection(layout, config);</span>
+  }
+
+  @Override
+  public GraphCollection fromCollections(Collection&lt;EPGMGraphHead&gt; graphHeads,
+    Collection&lt;EPGMVertex&gt; vertices, Collection&lt;EPGMEdge&gt; edges) {
+<span class="fc" id="L114">    return new GraphCollection(layoutFactory.fromCollections(graphHeads, vertices, edges), config);</span>
+  }
+
+  @Override
+  public GraphCollection fromGraph(
+    LogicalGraphLayout&lt;EPGMGraphHead, EPGMVertex, EPGMEdge&gt; logicalGraphLayout) {
+<span class="fc" id="L120">    return new GraphCollection(layoutFactory.fromGraphLayout(logicalGraphLayout), config);</span>
+  }
+
+  @Override
+public GraphCollection fromGraphs(
+  LogicalGraphLayout&lt;EPGMGraphHead, EPGMVertex, EPGMEdge&gt;... logicalGraphLayouts) {
+<span class="fc bfc" id="L126" title="All 2 branches covered.">    if (logicalGraphLayouts.length != 0) {</span>
+<span class="fc" id="L127">      DataSet&lt;EPGMGraphHead&gt; graphHeads = null;</span>
+<span class="fc" id="L128">      DataSet&lt;EPGMVertex&gt; vertices = null;</span>
+<span class="fc" id="L129">      DataSet&lt;EPGMEdge&gt; edges = null;</span>
+
+<span class="fc bfc" id="L131" title="All 2 branches covered.">      if (logicalGraphLayouts.length == 1) {</span>
+<span class="fc" id="L132">        return fromGraph(logicalGraphLayouts[0]);</span>
+      }
+
+<span class="fc bfc" id="L135" title="All 2 branches covered.">      for (LogicalGraphLayout&lt;EPGMGraphHead, EPGMVertex, EPGMEdge&gt; logicalGraph : logicalGraphLayouts) {</span>
+<span class="fc bfc" id="L136" title="All 2 branches covered.">        graphHeads = (graphHeads == null) ?</span>
+<span class="fc" id="L137">          logicalGraph.getGraphHead() : graphHeads.union(logicalGraph.getGraphHead());</span>
+<span class="fc bfc" id="L138" title="All 2 branches covered.">        vertices = (vertices == null) ?</span>
+<span class="fc" id="L139">          logicalGraph.getVertices() : vertices.union(logicalGraph.getVertices());</span>
+<span class="fc bfc" id="L140" title="All 2 branches covered.">        edges = (edges == null) ?</span>
+<span class="fc" id="L141">          logicalGraph.getEdges() : edges.union(logicalGraph.getEdges());</span>
+      }
+<span class="fc" id="L143">      return fromDataSets(</span>
+<span class="fc" id="L144">        graphHeads.distinct(new Id&lt;&gt;()),</span>
+<span class="fc" id="L145">        vertices.distinct(new Id&lt;&gt;()),</span>
+<span class="fc" id="L146">        edges.distinct(new Id&lt;&gt;()));</span>
+    }
+<span class="fc" id="L148">    return createEmptyCollection();</span>
+  }
+
+  @Override
+  public GraphCollection fromTransactions(DataSet&lt;GraphTransaction&gt; transactions) {
+<span class="fc" id="L153">    return new GraphCollection(layoutFactory.fromTransactions(transactions), config);</span>
+  }
+
+  @Override
+  public GraphCollection fromTransactions(DataSet&lt;GraphTransaction&gt; transactions,
+    GroupReduceFunction&lt;EPGMVertex, EPGMVertex&gt; vertexMergeReducer,
+    GroupReduceFunction&lt;EPGMEdge, EPGMEdge&gt; edgeMergeReducer) {
+<span class="fc" id="L160">    return new GraphCollection(layoutFactory</span>
+<span class="fc" id="L161">      .fromTransactions(transactions, vertexMergeReducer, edgeMergeReducer), config);</span>
+  }
+
+  @Override
+  public GraphCollection createEmptyCollection() {
+<span class="fc" id="L166">    return new GraphCollection(layoutFactory.createEmptyCollection(), config);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

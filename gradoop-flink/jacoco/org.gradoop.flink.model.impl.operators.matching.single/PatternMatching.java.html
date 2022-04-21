@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PatternMatching.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Gradoop Flink</a> &gt; <a href="index.source.html" class="el_package">org.gradoop.flink.model.impl.operators.matching.single</a> &gt; <span class="el_source">PatternMatching.java</span></div><h1>PatternMatching.java</h1><pre class="source lang-java linenums">/*
+ * Copyright © 2014 - 2021 Leipzig University (Database Research Group)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradoop.flink.model.impl.operators.matching.single;
+
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
+import org.apache.flink.api.java.DataSet;
+import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.logging.log4j.Logger;
+import org.gradoop.common.model.api.entities.Edge;
+import org.gradoop.common.model.api.entities.GraphHead;
+import org.gradoop.common.model.api.entities.Vertex;
+import org.gradoop.common.model.impl.id.GradoopId;
+import org.gradoop.common.model.impl.properties.PropertyValue;
+import org.gradoop.flink.model.api.epgm.BaseGraph;
+import org.gradoop.flink.model.api.epgm.BaseGraphCollection;
+import org.gradoop.flink.model.api.operators.UnaryBaseGraphToBaseGraphCollectionOperator;
+import org.gradoop.flink.model.impl.functions.epgm.PairElementWithPropertyValue;
+import org.gradoop.flink.model.impl.operators.matching.common.debug.PrintIdWithCandidates;
+import org.gradoop.flink.model.impl.operators.matching.common.debug.PrintTripleWithCandidates;
+import org.gradoop.flink.model.impl.operators.matching.common.debug.Printer;
+import org.gradoop.flink.model.impl.operators.matching.common.query.QueryHandler;
+import org.gradoop.flink.model.impl.operators.matching.common.tuples.IdWithCandidates;
+import org.gradoop.flink.model.impl.operators.matching.common.tuples.TripleWithCandidates;
+
+/**
+ * Base class for pattern matching implementations.
+ *
+ * @param &lt;G&gt; The graph head type.
+ * @param &lt;V&gt; The vertex type.
+ * @param &lt;E&gt; The edge type.
+ * @param &lt;LG&gt; The graph type.
+ * @param &lt;GC&gt; The graph collection type.
+ */
+public abstract class PatternMatching&lt;
+  G extends GraphHead,
+  V extends Vertex,
+  E extends Edge,
+  LG extends BaseGraph&lt;G, V, E, LG, GC&gt;,
+  GC extends BaseGraphCollection&lt;G, V, E, LG, GC&gt;&gt;
+  implements UnaryBaseGraphToBaseGraphCollectionOperator&lt;LG, GC&gt; {
+
+  /**
+   * The property key used to stored the variable mappings inside the GraphHead properties
+   */
+  public static final transient String VARIABLE_MAPPING_KEY = &quot;__variable_mapping&quot;;
+
+  /**
+   * GDL based query string
+   */
+  private final String query;
+  /**
+   * Logger from the concrete implementation
+   */
+  private final Logger log;
+  /**
+   * Query handler
+   */
+  private final QueryHandler queryHandler;
+  /**
+   * If true, the original vertex and edge data gets attached to the resulting
+   * vertices and edges.
+   */
+  private final boolean attachData;
+  /**
+   * Vertex mapping used for debug
+   */
+  private DataSet&lt;Tuple2&lt;GradoopId, PropertyValue&gt;&gt; vertexMapping;
+  /**
+   * Edge mapping used for debug
+   */
+  private DataSet&lt;Tuple2&lt;GradoopId, PropertyValue&gt;&gt; edgeMapping;
+
+  /**
+   * Constructor
+   *
+   * @param query       GDL query graph
+   * @param attachData  true, if original data shall be attached to the result
+   * @param log         Logger of the concrete implementation
+   */
+<span class="fc" id="L94">  public PatternMatching(String query, boolean attachData, Logger log) {</span>
+<span class="pc bpc" id="L95" title="1 of 2 branches missed.">    Preconditions.checkState(!Strings.isNullOrEmpty(query),</span>
+      &quot;Query must not be null or empty&quot;);
+<span class="fc" id="L97">    this.query         = query;</span>
+<span class="fc" id="L98">    this.queryHandler  = new QueryHandler(query);</span>
+<span class="fc" id="L99">    this.attachData    = attachData;</span>
+<span class="fc" id="L100">    this.log           = log;</span>
+<span class="fc" id="L101">  }</span>
+
+  @Override
+  public GC execute(LG graph) {
+<span class="pc bpc" id="L105" title="1 of 2 branches missed.">    if (log.isDebugEnabled()) {</span>
+<span class="nc" id="L106">      initDebugMappings(graph);</span>
+    }
+
+    GC result;
+
+<span class="fc bfc" id="L111" title="All 2 branches covered.">    if (queryHandler.isSingleVertexGraph()) {</span>
+<span class="fc" id="L112">      result = executeForVertex(graph);</span>
+    } else {
+<span class="fc" id="L114">      result = executeForPattern(graph);</span>
+    }
+
+<span class="fc" id="L117">    return result;</span>
+  }
+
+  /**
+   * Computes the result for single vertex query graphs.
+   *
+   * @param graph data graph
+   * @return result collection
+   */
+  protected abstract GC executeForVertex(LG graph);
+
+  /**
+   * Computes the result for pattern query graph.
+   *
+   * @param graph data graph
+   * @return result collection
+   */
+  protected abstract GC executeForPattern(LG graph);
+
+  /**
+   * Returns the query handler.
+   *
+   * @return query handler
+   */
+  protected QueryHandler getQueryHandler() {
+<span class="fc" id="L142">    return queryHandler;</span>
+  }
+
+  /**
+   * Returns the GDL query processed by this operator instance.
+   *
+   * @return GDL query
+   */
+  protected String getQuery() {
+<span class="fc" id="L151">    return query;</span>
+  }
+
+  /**
+   * Determines if the original vertex and edge data shall be attached
+   * to the vertices/edges in the resulting subgraphs.
+   *
+   * @return true, if original data must be attached
+   */
+  protected boolean doAttachData() {
+<span class="fc" id="L161">    return attachData;</span>
+  }
+
+  /**
+   * Returns a mapping between vertex id and property value used for debug.
+   *
+   * @return {@code vertex id -&gt; property value} mapping
+   */
+  protected DataSet&lt;Tuple2&lt;GradoopId, PropertyValue&gt;&gt; getVertexMapping() {
+<span class="fc" id="L170">    return vertexMapping;</span>
+  }
+
+  /**
+   * Returns a mapping between edge id and property value used for debug.
+   *
+   * @return {@code edge id -&gt; property value} mapping
+   */
+  protected DataSet&lt;Tuple2&lt;GradoopId, PropertyValue&gt;&gt; getEdgeMapping() {
+<span class="fc" id="L179">    return edgeMapping;</span>
+  }
+
+  /**
+   * Prints {@link TripleWithCandidates} to debug log.
+   *
+   * @param edges edge triples with candidates
+   * @return edges
+   */
+  protected DataSet&lt;TripleWithCandidates&lt;GradoopId&gt;&gt; printTriplesWithCandidates(
+    DataSet&lt;TripleWithCandidates&lt;GradoopId&gt;&gt; edges) {
+<span class="nc" id="L190">    return edges</span>
+<span class="nc" id="L191">      .map(new PrintTripleWithCandidates&lt;&gt;())</span>
+<span class="nc" id="L192">      .withBroadcastSet(vertexMapping, Printer.VERTEX_MAPPING)</span>
+<span class="nc" id="L193">      .withBroadcastSet(edgeMapping, Printer.EDGE_MAPPING);</span>
+  }
+
+  /**
+   * Prints {@link IdWithCandidates} to debug log.
+   *
+   * @param vertices vertex ids with candidates
+   * @return vertices
+   */
+  protected DataSet&lt;IdWithCandidates&lt;GradoopId&gt;&gt; printIdWithCandidates(
+    DataSet&lt;IdWithCandidates&lt;GradoopId&gt;&gt; vertices) {
+<span class="nc" id="L204">    return vertices</span>
+<span class="nc" id="L205">      .map(new PrintIdWithCandidates&lt;&gt;())</span>
+<span class="nc" id="L206">      .withBroadcastSet(vertexMapping, Printer.VERTEX_MAPPING)</span>
+<span class="nc" id="L207">      .withBroadcastSet(edgeMapping, Printer.EDGE_MAPPING);</span>
+  }
+
+  /**
+   * Initializes the debug mappings between vertices/edges and their debug id.
+   *
+   * @param graph data graph
+   */
+  private void initDebugMappings(LG graph) {
+<span class="nc" id="L216">    vertexMapping = graph.getVertices()</span>
+<span class="nc" id="L217">      .map(new PairElementWithPropertyValue&lt;&gt;(&quot;id&quot;));</span>
+<span class="nc" id="L218">    edgeMapping = graph.getEdges()</span>
+<span class="nc" id="L219">      .map(new PairElementWithPropertyValue&lt;&gt;(&quot;id&quot;));</span>
+<span class="nc" id="L220">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ApplyAggregation.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Gradoop Flink</a> &gt; <a href="index.source.html" class="el_package">org.gradoop.flink.model.impl.operators.aggregation</a> &gt; <span class="el_source">ApplyAggregation.java</span></div><h1>ApplyAggregation.java</h1><pre class="source lang-java linenums">/*
+ * Copyright © 2014 - 2021 Leipzig University (Database Research Group)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradoop.flink.model.impl.operators.aggregation;
+
+import org.apache.flink.api.java.DataSet;
+import org.apache.flink.api.java.tuple.Tuple2;
+import org.gradoop.common.model.api.entities.Edge;
+import org.gradoop.common.model.api.entities.GraphHead;
+import org.gradoop.common.model.api.entities.Vertex;
+import org.gradoop.common.model.impl.id.GradoopId;
+import org.gradoop.common.model.impl.properties.PropertyValue;
+import org.gradoop.flink.model.api.epgm.BaseGraph;
+import org.gradoop.flink.model.api.epgm.BaseGraphCollection;
+import org.gradoop.flink.model.api.operators.ApplicableUnaryBaseGraphToBaseGraphOperator;
+import org.gradoop.flink.model.api.functions.AggregateFunction;
+import org.gradoop.flink.model.impl.functions.epgm.ElementsOfSelectedGraphs;
+import org.gradoop.flink.model.impl.functions.epgm.Id;
+import org.gradoop.flink.model.impl.layouts.transactional.tuples.GraphTransaction;
+import org.gradoop.flink.model.impl.operators.aggregation.functions.AggregateTransactions;
+import org.gradoop.flink.model.impl.operators.aggregation.functions.ApplyAggregateElements;
+import org.gradoop.flink.model.impl.operators.aggregation.functions.CombinePartitionApplyAggregates;
+import org.gradoop.flink.model.impl.operators.aggregation.functions.SetAggregateProperties;
+
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+
+/**
+ * Takes a collection of base graphs and user defined aggregate functions as
+ * input. The aggregate functions are applied on each base graph contained in
+ * the collection and the aggregate is stored as additional properties at the graphs.
+ *
+ * @param &lt;G&gt; type of the graph head
+ * @param &lt;V&gt; the vertex type
+ * @param &lt;E&gt; the edge type
+ * @param &lt;LG&gt; type of the logical graph instance
+ * @param &lt;GC&gt; type of the graph collection
+ */
+public class ApplyAggregation&lt;
+  G extends GraphHead,
+  V extends Vertex,
+  E extends Edge,
+  LG extends BaseGraph&lt;G, V, E, LG, GC&gt;,
+  GC extends BaseGraphCollection&lt;G, V, E, LG, GC&gt;&gt;
+  implements ApplicableUnaryBaseGraphToBaseGraphOperator&lt;GC&gt; {
+
+  /**
+   * User-defined aggregate functions which get applied on a graph collection.
+   */
+  private final Set&lt;AggregateFunction&gt; aggregateFunctions;
+
+  /**
+   * Creates a new operator instance.
+   *
+   * @param aggregateFunctions functions to compute aggregate values
+   */
+<span class="fc" id="L74">  public ApplyAggregation(final AggregateFunction... aggregateFunctions) {</span>
+<span class="fc bfc" id="L75" title="All 2 branches covered.">    for (AggregateFunction aggFunc : aggregateFunctions) {</span>
+<span class="fc" id="L76">      checkNotNull(aggFunc);</span>
+    }
+<span class="fc" id="L78">    this.aggregateFunctions = new HashSet&lt;&gt;(Arrays.asList(aggregateFunctions));</span>
+<span class="fc" id="L79">  }</span>
+
+  @Override
+  public GC executeForGVELayout(GC collection) {
+<span class="fc" id="L83">    DataSet&lt;G&gt; graphHeads = collection.getGraphHeads();</span>
+<span class="fc" id="L84">    DataSet&lt;GradoopId&gt; graphIds = graphHeads.map(new Id&lt;&gt;());</span>
+
+<span class="fc" id="L86">    DataSet&lt;Tuple2&lt;GradoopId, Map&lt;String, PropertyValue&gt;&gt;&gt; aggregate =</span>
+<span class="fc" id="L87">      aggregateVertices(collection.getVertices(), graphIds)</span>
+<span class="fc" id="L88">        .union(aggregateEdges(collection.getEdges(), graphIds))</span>
+<span class="fc" id="L89">        .groupBy(0)</span>
+<span class="fc" id="L90">        .reduceGroup(new CombinePartitionApplyAggregates(aggregateFunctions));</span>
+
+<span class="fc" id="L92">    graphHeads = graphHeads</span>
+<span class="fc" id="L93">      .coGroup(aggregate)</span>
+<span class="fc" id="L94">      .where(new Id&lt;&gt;()).equalTo(0)</span>
+<span class="fc" id="L95">      .with(new SetAggregateProperties&lt;&gt;(aggregateFunctions));</span>
+
+<span class="fc" id="L97">    return collection.getFactory().fromDataSets(graphHeads, collection.getVertices(), collection.getEdges());</span>
+  }
+
+  @Override
+  public GC executeForTxLayout(GC collection) {
+<span class="fc" id="L102">    DataSet&lt;GraphTransaction&gt; updatedTransactions = collection.getGraphTransactions()</span>
+<span class="fc" id="L103">      .map(new AggregateTransactions(aggregateFunctions));</span>
+
+<span class="fc" id="L105">    return collection.getFactory().fromTransactions(updatedTransactions);</span>
+  }
+
+  /**
+   * Applies an aggregate function to the partitions of a vertex data set.
+   *
+   * @param vertices vertex data set
+   * @param graphIds graph ids to aggregate
+   * @return partition aggregate value
+   */
+  private DataSet&lt;Tuple2&lt;GradoopId, Map&lt;String, PropertyValue&gt;&gt;&gt; aggregateVertices(
+    DataSet&lt;V&gt; vertices, DataSet&lt;GradoopId&gt; graphIds) {
+<span class="fc" id="L117">    return vertices</span>
+<span class="fc" id="L118">      .flatMap(new ElementsOfSelectedGraphs&lt;&gt;())</span>
+<span class="fc" id="L119">      .withBroadcastSet(graphIds, ElementsOfSelectedGraphs.GRAPH_IDS)</span>
+<span class="fc" id="L120">      .groupBy(0)</span>
+<span class="fc" id="L121">      .combineGroup(new ApplyAggregateElements&lt;&gt;(aggregateFunctions.stream()</span>
+<span class="fc" id="L122">        .filter(AggregateFunction::isVertexAggregation)</span>
+<span class="fc" id="L123">        .collect(Collectors.toSet())));</span>
+  }
+
+  /**
+   * Applies an aggregate function to the partitions of an edge data set.
+   *
+   * @param edges edge data set
+   * @param graphIds graph ids to aggregate
+   * @return partition aggregate value
+   */
+  private DataSet&lt;Tuple2&lt;GradoopId, Map&lt;String, PropertyValue&gt;&gt;&gt; aggregateEdges(
+    DataSet&lt;E&gt; edges, DataSet&lt;GradoopId&gt; graphIds) {
+<span class="fc" id="L135">    return edges</span>
+<span class="fc" id="L136">      .flatMap(new ElementsOfSelectedGraphs&lt;&gt;())</span>
+<span class="fc" id="L137">      .withBroadcastSet(graphIds, ElementsOfSelectedGraphs.GRAPH_IDS)</span>
+<span class="fc" id="L138">      .groupBy(0)</span>
+<span class="fc" id="L139">      .combineGroup(new ApplyAggregateElements&lt;&gt;(aggregateFunctions.stream()</span>
+<span class="fc" id="L140">        .filter(AggregateFunction::isEdgeAggregation)</span>
+<span class="fc" id="L141">        .collect(Collectors.toSet())));</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

@@ -1,0 +1,637 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BaseGraphOperators.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Gradoop Flink</a> &gt; <a href="index.source.html" class="el_package">org.gradoop.flink.model.api.epgm</a> &gt; <span class="el_source">BaseGraphOperators.java</span></div><h1>BaseGraphOperators.java</h1><pre class="source lang-java linenums">/*
+ * Copyright © 2014 - 2021 Leipzig University (Database Research Group)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradoop.flink.model.api.epgm;
+
+import com.google.common.collect.Lists;
+import org.apache.flink.api.common.functions.FilterFunction;
+import org.apache.flink.api.java.DataSet;
+import org.gradoop.common.model.api.entities.Edge;
+import org.gradoop.common.model.api.entities.GraphHead;
+import org.gradoop.common.model.api.entities.Vertex;
+import org.gradoop.flink.model.api.functions.AggregateFunction;
+import org.gradoop.flink.model.api.functions.EdgeAggregateFunction;
+import org.gradoop.flink.model.api.functions.TransformationFunction;
+import org.gradoop.flink.model.api.functions.VertexAggregateFunction;
+import org.gradoop.flink.model.api.operators.BinaryBaseGraphToBaseGraphOperator;
+import org.gradoop.flink.model.api.operators.BinaryBaseGraphToValueOperator;
+import org.gradoop.flink.model.api.operators.UnaryBaseGraphToBaseGraphCollectionOperator;
+import org.gradoop.flink.model.api.operators.UnaryBaseGraphToBaseGraphOperator;
+import org.gradoop.flink.model.api.operators.UnaryBaseGraphToValueOperator;
+import org.gradoop.flink.model.impl.functions.epgm.PropertyGetter;
+import org.gradoop.flink.model.impl.operators.aggregation.Aggregation;
+import org.gradoop.flink.model.impl.operators.cloning.Cloning;
+import org.gradoop.flink.model.impl.operators.combination.Combination;
+import org.gradoop.flink.model.impl.operators.equality.GraphEquality;
+import org.gradoop.flink.model.impl.operators.exclusion.Exclusion;
+import org.gradoop.flink.model.impl.operators.grouping.Grouping;
+import org.gradoop.flink.model.impl.operators.grouping.GroupingStrategy;
+import org.gradoop.flink.model.impl.operators.matching.common.MatchStrategy;
+import org.gradoop.flink.model.impl.operators.matching.common.statistics.GraphStatistics;
+import org.gradoop.flink.model.impl.operators.matching.single.cypher.CypherPatternMatching;
+import org.gradoop.flink.model.impl.operators.neighborhood.Neighborhood;
+import org.gradoop.flink.model.impl.operators.neighborhood.ReduceEdgeNeighborhood;
+import org.gradoop.flink.model.impl.operators.neighborhood.ReduceVertexNeighborhood;
+import org.gradoop.flink.model.impl.operators.overlap.Overlap;
+import org.gradoop.flink.model.impl.operators.sampling.SamplingAlgorithm;
+import org.gradoop.flink.model.impl.operators.split.Split;
+import org.gradoop.flink.model.impl.operators.subgraph.Subgraph;
+import org.gradoop.flink.model.impl.operators.tostring.functions.EdgeToDataString;
+import org.gradoop.flink.model.impl.operators.tostring.functions.EdgeToIdString;
+import org.gradoop.flink.model.impl.operators.tostring.functions.GraphHeadToDataString;
+import org.gradoop.flink.model.impl.operators.tostring.functions.GraphHeadToEmptyString;
+import org.gradoop.flink.model.impl.operators.tostring.functions.VertexToDataString;
+import org.gradoop.flink.model.impl.operators.tostring.functions.VertexToIdString;
+import org.gradoop.flink.model.impl.operators.transformation.Transformation;
+import org.gradoop.flink.model.impl.operators.verify.Verify;
+import org.gradoop.flink.model.impl.operators.verify.VerifyGraphContainment;
+
+import java.util.List;
+import java.util.Objects;
+
+/**
+ * Defines the operators that are available on a {@link BaseGraph}.
+ *
+ * @param &lt;G&gt;  The graph head type.
+ * @param &lt;V&gt;  The vertex type.
+ * @param &lt;E&gt;  The edge type.
+ * @param &lt;LG&gt; The type of the graph.
+ * @param &lt;GC&gt; The type of the graph collection.
+ */
+public interface BaseGraphOperators&lt;
+  G extends GraphHead,
+  V extends Vertex,
+  E extends Edge,
+  LG extends BaseGraph&lt;G, V, E, LG, GC&gt;,
+  GC extends BaseGraphCollection&lt;G, V, E, LG, GC&gt;&gt; {
+
+  //----------------------------------------------------------------------------
+  // Unary Operators
+  //----------------------------------------------------------------------------
+
+  /**
+   * Evaluates the given query using the Cypher query engine. The engine uses default morphism strategies,
+   * which is vertex homomorphism and edge isomorphism. The vertex and edge data of the data graph elements
+   * is attached to the resulting vertices.
+   * &lt;p&gt;
+   * Note, that this method used no statistics about the data graph which may result in bad runtime
+   * performance. Use {@link #query(String, GraphStatistics)} to provide statistics for the query planner.
+   *
+   * @param query Cypher query
+   * @return graph collection containing matching subgraphs
+   */
+  default GC query(String query) {
+<span class="nc" id="L96">    return query(query, new GraphStatistics(1, 1, 1, 1));</span>
+  }
+
+  /**
+   * Evaluates the given query using the Cypher query engine. The engine uses default morphism strategies,
+   * which is vertex homomorphism and edge isomorphism. The vertex and edge data of the data graph elements
+   * is attached to the resulting vertices.
+   * &lt;p&gt;
+   * Note, that this method used no statistics about the data graph which may result in bad runtime
+   * performance. Use {@link #query(String, String, GraphStatistics)} to provide statistics for the query planner.
+   * &lt;p&gt;
+   * In addition, the operator can be supplied with a construction pattern allowing the creation of new graph
+   * elements based on variable bindings of the match pattern. Consider the following example:
+   * &lt;br&gt;
+   * {@code graph.query(
+   *  &quot;MATCH (a:Author)-[:WROTE]-&gt;(:Paper)&lt;-[:WROTE]-(b:Author) WHERE a &lt;&gt; b&quot;,
+   *  &quot;(a)-[:CO_AUTHOR]-&gt;(b)&quot;)}
+   * &lt;p&gt;
+   * The query pattern is looking for pairs of authors that worked on the same paper.
+   * The construction pattern defines a new edge of type CO_AUTHOR between the two entities.
+   *
+   * @param query               Cypher query string
+   * @param constructionPattern Construction pattern
+   * @return graph collection containing the output of the construct pattern
+   */
+  default GC query(String query, String constructionPattern) {
+<span class="fc" id="L122">    return query(query, constructionPattern, new GraphStatistics(1, 1, 1, 1));</span>
+  }
+
+  /**
+   * Evaluates the given query using the Cypher query engine. The engine uses default morphism strategies,
+   * which is vertex homomorphism and edge isomorphism. The vertex and edge data of the data graph elements
+   * is attached to the resulting vertices.
+   *
+   * @param query           Cypher query
+   * @param graphStatistics statistics about the data graph
+   * @return graph collection containing matching subgraphs
+   */
+  default GC query(String query, GraphStatistics graphStatistics) {
+<span class="nc" id="L135">    return query(query, true, MatchStrategy.HOMOMORPHISM, MatchStrategy.ISOMORPHISM,</span>
+      graphStatistics);
+  }
+
+  /**
+   * Evaluates the given query using the Cypher query engine. The engine uses default morphism strategies,
+   * which is vertex homomorphism and edge isomorphism. The vertex and edge data of the data graph elements
+   * is attached to the resulting vertices.
+   * &lt;p&gt;
+   * In addition, the operator can be supplied with a construction pattern allowing the creation of new graph
+   * elements based on variable bindings of the match pattern. Consider the following example:
+   * &lt;br&gt;
+   * {@code graph.query(
+   *  &quot;MATCH (a:Author)-[:WROTE]-&gt;(:Paper)&lt;-[:WROTE]-(b:Author) WHERE a &lt;&gt; b&quot;,
+   *  &quot;(a)-[:CO_AUTHOR]-&gt;(b)&quot;)}
+   * &lt;p&gt;
+   * The query pattern is looking for pairs of authors that worked on the same paper.
+   * The construction pattern defines a new edge of type CO_AUTHOR between the two entities.
+   *
+   * @param query               Cypher query
+   * @param constructionPattern Construction pattern
+   * @param graphStatistics     statistics about the data graph
+   * @return graph collection containing the output of the construct pattern
+   */
+  default GC query(String query, String constructionPattern, GraphStatistics graphStatistics) {
+<span class="fc" id="L160">    return query(query, constructionPattern, true, MatchStrategy.HOMOMORPHISM,</span>
+      MatchStrategy.ISOMORPHISM, graphStatistics);
+  }
+
+  /**
+   * Evaluates the given query using the Cypher query engine.
+   *
+   * @param query           Cypher query
+   * @param attachData      attach original vertex and edge data to the result
+   * @param vertexStrategy  morphism setting for vertex mapping
+   * @param edgeStrategy    morphism setting for edge mapping
+   * @param graphStatistics statistics about the data graph
+   * @return graph collection containing matching subgraphs
+   */
+  default GC query(String query, boolean attachData, MatchStrategy vertexStrategy,
+                   MatchStrategy edgeStrategy, GraphStatistics graphStatistics) {
+<span class="nc" id="L176">    return query(query, null, attachData, vertexStrategy, edgeStrategy, graphStatistics);</span>
+  }
+
+  /**
+   * Evaluates the given query using the Cypher query engine.
+   *
+   * @param query               Cypher query
+   * @param constructionPattern Construction pattern
+   * @param attachData          attach original vertex and edge data to the result
+   * @param vertexStrategy      morphism setting for vertex mapping
+   * @param edgeStrategy        morphism setting for edge mapping
+   * @param graphStatistics     statistics about the data graph
+   * @return graph collection containing matching subgraphs
+   */
+  default GC query(String query, String constructionPattern, boolean attachData, MatchStrategy vertexStrategy,
+                   MatchStrategy edgeStrategy, GraphStatistics graphStatistics) {
+<span class="fc" id="L192">    return callForCollection(new CypherPatternMatching&lt;&gt;(query, constructionPattern, attachData,</span>
+      vertexStrategy, edgeStrategy, graphStatistics));
+  }
+
+  /**
+   * Creates a copy of the base graph.
+   * &lt;p&gt;
+   * Note that this method creates new graph head, vertex and edge instances.
+   *
+   * @return projected base graph
+   */
+  default LG copy() {
+<span class="fc" id="L204">    return callForGraph(new Cloning&lt;&gt;());</span>
+  }
+
+  /**
+   * Creates a condensed version of the base graph by grouping vertices based on the specified
+   * property keys.
+   * &lt;p&gt;
+   * Vertices are grouped by the given property keys. Edges are implicitly grouped along with their
+   * incident vertices.
+   * &lt;p&gt;
+   * Note: To group vertices by their type label, one needs to add the specific symbol
+   * {@link Grouping#LABEL_SYMBOL} to the respective grouping keys.
+   *
+   * @param vertexGroupingKeys property keys to group vertices
+   * @return summary graph
+   * @see Grouping
+   */
+  default LG groupBy(List&lt;String&gt; vertexGroupingKeys) {
+<span class="nc" id="L222">    return groupBy(vertexGroupingKeys, null);</span>
+  }
+
+  /**
+   * Creates a condensed version of the base graph by grouping vertices and edges based on given
+   * property keys.
+   * &lt;p&gt;
+   * Vertices are grouped by the given property keys. Edges are implicitly grouped along with their
+   * incident vertices and explicitly by the specified edge grouping keys.
+   * &lt;p&gt;
+   * One needs to at least specify a list of vertex grouping keys. Any other argument may be
+   * {@code null}.
+   * &lt;p&gt;
+   * Note: To group vertices/edges by their type label, one needs to add the specific symbol
+   * {@link Grouping#LABEL_SYMBOL} to the respective grouping keys.
+   *
+   * @param vertexGroupingKeys property keys to group vertices
+   * @param edgeGroupingKeys   property keys to group edges
+   * @return summary graph
+   * @see Grouping
+   */
+  default LG groupBy(List&lt;String&gt; vertexGroupingKeys, List&lt;String&gt; edgeGroupingKeys) {
+<span class="nc" id="L244">    return groupBy(vertexGroupingKeys, null, edgeGroupingKeys, null, GroupingStrategy.GROUP_REDUCE);</span>
+  }
+
+  /**
+   * Creates a condensed version of the base graph by grouping vertices and edges based on given
+   * property keys.
+   * &lt;p&gt;
+   * Vertices are grouped by the given property keys. Edges are implicitly grouped along with their
+   * incident vertices and explicitly by the specified edge grouping keys. Furthermore, one can
+   * specify sets of vertex and edge aggregate functions which are applied on vertices/edges
+   * represented by the same super vertex/edge.
+   * &lt;p&gt;
+   * One needs to at least specify a list of vertex grouping keys. Any other argument may be
+   * {@code null}.
+   * &lt;p&gt;
+   * Note: To group vertices/edges by their type label, one needs to add the specific symbol
+   * {@link Grouping#LABEL_SYMBOL} to the respective grouping keys.
+   *
+   * @param vertexGroupingKeys       property keys to group vertices
+   * @param vertexAggregateFunctions aggregate functions to apply on super vertices
+   * @param edgeGroupingKeys         property keys to group edges
+   * @param edgeAggregateFunctions   aggregate functions to apply on super edges
+   * @param groupingStrategy         execution strategy for vertex grouping
+   * @return summary graph
+   * @see Grouping
+   */
+  default LG groupBy(
+    List&lt;String&gt; vertexGroupingKeys, List&lt;AggregateFunction&gt; vertexAggregateFunctions,
+    List&lt;String&gt; edgeGroupingKeys, List&lt;AggregateFunction&gt; edgeAggregateFunctions,
+    GroupingStrategy groupingStrategy) {
+
+<span class="fc" id="L275">    Objects.requireNonNull(vertexGroupingKeys, &quot;missing vertex grouping key(s)&quot;);</span>
+<span class="fc" id="L276">    Objects.requireNonNull(groupingStrategy, &quot;missing vertex grouping strategy&quot;);</span>
+
+<span class="fc" id="L278">    Grouping.GroupingBuilder builder = new Grouping.GroupingBuilder();</span>
+
+<span class="fc" id="L280">    builder.addVertexGroupingKeys(vertexGroupingKeys);</span>
+<span class="fc" id="L281">    builder.setStrategy(groupingStrategy);</span>
+
+<span class="pc bpc" id="L283" title="1 of 2 branches missed.">    if (edgeGroupingKeys != null) {</span>
+<span class="fc" id="L284">      builder.addEdgeGroupingKeys(edgeGroupingKeys);</span>
+    }
+<span class="pc bpc" id="L286" title="1 of 2 branches missed.">    if (vertexAggregateFunctions != null) {</span>
+<span class="fc" id="L287">      vertexAggregateFunctions.forEach(builder::addVertexAggregateFunction);</span>
+    }
+<span class="pc bpc" id="L289" title="1 of 2 branches missed.">    if (edgeAggregateFunctions != null) {</span>
+<span class="fc" id="L290">      edgeAggregateFunctions.forEach(builder::addEdgeAggregateFunction);</span>
+    }
+<span class="fc" id="L292">    return callForGraph(builder.build());</span>
+  }
+
+  /**
+   * Creates a new graph from a chosen subset of nodes and their associated edges, depending on the given
+   * sampling algorithm.
+   *
+   * @param algorithm used sampling algorithm
+   * @return graph with a subset of nodes and their associated edges
+   */
+  default LG sample(SamplingAlgorithm&lt;G, V, E, LG, GC&gt; algorithm) {
+<span class="nc" id="L303">    return callForGraph(algorithm);</span>
+  }
+
+  /**
+   * Transforms the elements of the base graph using the given transformation functions.
+   * The identity of the elements is preserved.
+   *
+   * @param graphHeadTransformationFunction graph head transformation function
+   * @param vertexTransformationFunction    vertex transformation function
+   * @param edgeTransformationFunction      edge transformation function
+   * @return transformed base graph
+   */
+  default LG transform(
+    TransformationFunction&lt;G&gt; graphHeadTransformationFunction,
+    TransformationFunction&lt;V&gt; vertexTransformationFunction,
+    TransformationFunction&lt;E&gt; edgeTransformationFunction) {
+<span class="fc" id="L319">    return callForGraph(new Transformation&lt;&gt;(</span>
+      graphHeadTransformationFunction,
+      vertexTransformationFunction,
+      edgeTransformationFunction));
+  }
+
+  /**
+   * Transforms the graph head of the base graph using the given
+   * transformation function. The identity of the graph is preserved.
+   *
+   * @param graphHeadTransformationFunction graph head transformation function
+   * @return transformed base graph
+   */
+  default LG transformGraphHead(TransformationFunction&lt;G&gt; graphHeadTransformationFunction) {
+<span class="fc" id="L333">    return transform(graphHeadTransformationFunction, null, null);</span>
+  }
+
+  /**
+   * Transforms the vertices of the base graph using the given transformation
+   * function. The identity of the vertices is preserved.
+   *
+   * @param vertexTransformationFunction vertex transformation function
+   * @return transformed base graph
+   */
+  default LG transformVertices(TransformationFunction&lt;V&gt; vertexTransformationFunction) {
+<span class="fc" id="L344">    return transform(null, vertexTransformationFunction, null);</span>
+  }
+
+  /**
+   * Transforms the edges of the base graph using the given transformation function.
+   * The identity of the edges is preserved.
+   *
+   * @param edgeTransformationFunction edge transformation function
+   * @return transformed base graph
+   */
+  default LG transformEdges(TransformationFunction&lt;E&gt; edgeTransformationFunction) {
+<span class="fc" id="L355">    return transform(null, null, edgeTransformationFunction);</span>
+  }
+
+  /**
+   * Returns the subgraph that is induced by the vertices which fulfill the given filter function.
+   *
+   * @param vertexFilterFunction vertex filter function
+   * @return vertex-induced subgraph
+   */
+  default LG vertexInducedSubgraph(FilterFunction&lt;V&gt; vertexFilterFunction) {
+<span class="fc" id="L365">    Objects.requireNonNull(vertexFilterFunction);</span>
+<span class="fc" id="L366">    return callForGraph(</span>
+      new Subgraph&lt;&gt;(vertexFilterFunction, null, Subgraph.Strategy.VERTEX_INDUCED));
+  }
+
+  /**
+   * Returns the subgraph that is induced by the edges which fulfill the given filter function.
+   *
+   * @param edgeFilterFunction edge filter function
+   * @return edge-induced subgraph
+   */
+  default LG edgeInducedSubgraph(FilterFunction&lt;E&gt; edgeFilterFunction) {
+<span class="fc" id="L377">    Objects.requireNonNull(edgeFilterFunction);</span>
+<span class="fc" id="L378">    return callForGraph(new Subgraph&lt;&gt;(null, edgeFilterFunction, Subgraph.Strategy.EDGE_INDUCED));</span>
+  }
+
+  /**
+   * Returns a subgraph of the base graph which contains only those vertices
+   * and edges that fulfil the given vertex and edge filter functions respectively.
+   * &lt;p&gt;
+   * Note, that the operator does not verify the consistency of the resulting graph.
+   * Use {@link #verify()} for that behaviour.
+   *
+   * @param vertexFilterFunction vertex filter function
+   * @param edgeFilterFunction   edge filter function
+   * @return base graph which fulfils the given predicates and is a subgraph of that graph
+   */
+  default LG subgraph(FilterFunction&lt;V&gt; vertexFilterFunction,
+                      FilterFunction&lt;E&gt; edgeFilterFunction) {
+<span class="fc" id="L394">    Objects.requireNonNull(vertexFilterFunction);</span>
+<span class="fc" id="L395">    Objects.requireNonNull(edgeFilterFunction);</span>
+<span class="fc" id="L396">    return subgraph(vertexFilterFunction, edgeFilterFunction, Subgraph.Strategy.BOTH);</span>
+  }
+
+  /**
+   * Returns a subgraph of the base graph which contains only those vertices
+   * and edges that fulfil the given vertex and edge filter functions respectively.
+   * &lt;p&gt;
+   * Note, that the operator does not verify the consistency of the resulting graph.
+   * Use {@link #verify()} for that behaviour.
+   *
+   * @param vertexFilterFunction vertex filter function
+   * @param edgeFilterFunction   edge filter function
+   * @param strategy             execution strategy for the operator
+   * @return base graph which fulfils the given predicates and is a subgraph of that graph
+   */
+  default LG subgraph(FilterFunction&lt;V&gt; vertexFilterFunction,
+                      FilterFunction&lt;E&gt; edgeFilterFunction, Subgraph.Strategy strategy) {
+<span class="fc" id="L413">    return callForGraph(new Subgraph&lt;&gt;(vertexFilterFunction, edgeFilterFunction, strategy));</span>
+  }
+
+  /**
+   * Applies the given aggregate functions to the base graph and stores the
+   * result of those functions at the resulting graph using the given property keys.
+   *
+   * @param aggregateFunctions computes aggregates on the base graph
+   * @return base graph with additional properties storing the aggregates
+   */
+  default LG aggregate(AggregateFunction... aggregateFunctions) {
+<span class="fc" id="L424">    return callForGraph(new Aggregation&lt;&gt;(aggregateFunctions));</span>
+  }
+
+  /**
+   * Sets the aggregation result of the given function as property for each vertex. All edges where
+   * the vertex is relevant get joined first and then grouped. The relevant edges are specified
+   * using the direction which may direct to the vertex, or from the vertex or both.
+   *
+   * @param function      aggregate function
+   * @param edgeDirection incoming, outgoing edges or both
+   * @return base graph where vertices store aggregated information about connected edges
+   */
+  default LG reduceOnEdges(EdgeAggregateFunction function,
+                           Neighborhood.EdgeDirection edgeDirection) {
+<span class="fc" id="L438">    return callForGraph(new ReduceEdgeNeighborhood&lt;&gt;(function, edgeDirection));</span>
+  }
+
+  /**
+   * Sets the aggregation result of the given function as property for each vertex. All vertices
+   * of relevant edges get joined first and then grouped by the vertex. The relevant edges are
+   * specified using the direction which may direct to the vertex, or from the vertex or both.
+   *
+   * @param function      aggregate function
+   * @param edgeDirection incoming, outgoing edges or both
+   * @return base graph where vertices store aggregated information about connected vertices
+   */
+  default LG reduceOnNeighbors(VertexAggregateFunction function,
+                               Neighborhood.EdgeDirection edgeDirection) {
+<span class="fc" id="L452">    return callForGraph(new ReduceVertexNeighborhood&lt;&gt;(function, edgeDirection));</span>
+  }
+
+  /**
+   * Verifies this graph, removing dangling edges, i.e. edges pointing to or from
+   * a vertex not contained in this graph.&lt;br&gt;
+   * This operator can be applied after an operator that has not checked the graphs validity.
+   * The graph head of this base graph remains unchanged.
+   *
+   * @return this graph with all dangling edges removed.
+   */
+  default LG verify() {
+<span class="fc" id="L464">    return callForGraph(new Verify&lt;&gt;());</span>
+  }
+
+  /**
+   * Verifies this graph, removing dangling graph ids from its elements,
+   * i.e. ids different from this graph heads id.&lt;br&gt;
+   * This operator can be applied after an operator that has not checked the graphs validity.
+   * The graph head of this base graph remains unchanged.
+   *
+   * @return this graph with all dangling graph ids removed.
+   */
+  default LG verifyGraphContainment() {
+<span class="fc" id="L476">    return callForGraph(new VerifyGraphContainment&lt;&gt;());</span>
+  }
+
+  //----------------------------------------------------------------------------
+  // Binary Operators
+  //----------------------------------------------------------------------------
+
+  /**
+   * Creates a new base graph by combining the vertex and edge sets of
+   * this graph and the given graph. Vertex and edge equality is based on their identifiers.
+   *
+   * @param otherGraph base graph to combine this graph with
+   * @return base graph containing all vertices and edges of the input graphs
+   */
+  default LG combine(LG otherGraph) {
+<span class="fc" id="L491">    return callForGraph(new Combination&lt;&gt;(), otherGraph);</span>
+  }
+
+  /**
+   * Creates a new base graph containing the overlapping vertex and edge sets of this graph
+   * and the given graph. Vertex and edge equality is based on their identifiers.
+   *
+   * @param otherGraph base graph to compute overlap with
+   * @return base graph that contains all vertices and edges that exist in both input graphs
+   */
+  default LG overlap(LG otherGraph) {
+<span class="fc" id="L502">    return callForGraph(new Overlap&lt;&gt;(), otherGraph);</span>
+  }
+
+  /**
+   * Creates a new base graph containing only vertices and edges that exist in that graph
+   * but not in the other graph. Vertex and edge equality is based on their identifiers.
+   * The graph head of this graph is retained.
+   *
+   * @param otherGraph base graph to exclude from that graph
+   * @return base that contains only vertices and edges that are not in the other graph
+   */
+  default LG exclude(LG otherGraph) {
+<span class="fc" id="L514">    return callForGraph(new Exclusion&lt;&gt;(), otherGraph);</span>
+  }
+
+  /**
+   * Checks, if another graph contains exactly the same vertices and edges (by id) as this graph.
+   *
+   * @param other other graph
+   * @return 1-element dataset containing true, iff equal by element ids
+   */
+  default DataSet&lt;Boolean&gt; equalsByElementIds(LG other) {
+<span class="fc" id="L524">    return callForValue(new GraphEquality&lt;&gt;(</span>
+      new GraphHeadToEmptyString&lt;&gt;(),
+      new VertexToIdString&lt;&gt;(),
+      new EdgeToIdString&lt;&gt;(), true), other);
+  }
+
+  /**
+   * Checks, if another graph contains vertices and edges with the same
+   * attached data (i.e. label and properties) as this graph.
+   *
+   * @param other other graph
+   * @return 1-element dataset containing true, iff equal by element data
+   */
+  default DataSet&lt;Boolean&gt; equalsByElementData(LG other) {
+<span class="fc" id="L538">    return callForValue(new GraphEquality&lt;&gt;(</span>
+      new GraphHeadToEmptyString&lt;&gt;(),
+      new VertexToDataString&lt;&gt;(),
+      new EdgeToDataString&lt;&gt;(), true), other);
+  }
+
+  /**
+   * Checks, if another graph has the same attached data and contains
+   * vertices and edges with the same attached data as this graph.
+   *
+   * @param other other graph
+   * @return 1-element dataset containing true, iff equal by element data
+   */
+  default DataSet&lt;Boolean&gt; equalsByData(LG other) {
+<span class="fc" id="L552">    return callForValue(new GraphEquality&lt;&gt;(</span>
+      new GraphHeadToDataString&lt;&gt;(),
+      new VertexToDataString&lt;&gt;(),
+      new EdgeToDataString&lt;&gt;(), true), other);
+  }
+
+  //----------------------------------------------------------------------------
+  // Utility methods
+  //----------------------------------------------------------------------------
+
+  /**
+   * Returns a 1-element dataset containing a {@code boolean} value which indicates if the graph is empty.
+   *
+   * A graph is considered empty, if it contains no vertices.
+   *
+   * @return  1-element dataset containing {@code true}, if the collection is
+   *          empty or {@code false} if not
+   */
+  DataSet&lt;Boolean&gt; isEmpty();
+
+  /**
+   * Splits the graph into multiple logical graphs using the property value which is assigned to the given
+   * property key. Vertices and edges that do not have this property will be removed from the resulting
+   * collection.
+   *
+   * @param propertyKey split property key
+   * @return graph collection
+   */
+  default GC splitBy(String propertyKey) {
+<span class="fc" id="L581">    return callForCollection(new Split&lt;&gt;(new PropertyGetter&lt;&gt;(Lists.newArrayList(propertyKey))));</span>
+  }
+
+  //----------------------------------------------------------------------------
+  // Call for Operators
+  //----------------------------------------------------------------------------
+
+  /**
+   * Creates a value using the given unary graph to value operator.
+   *
+   * @param operator unary graph to value operator
+   * @param &lt;T&gt; return type
+   * @return result of given operator
+   */
+  &lt;T&gt; T callForValue(UnaryBaseGraphToValueOperator&lt;LG, T&gt; operator);
+
+  /**
+   * Calls the given binary graph to value operator using this graph and the input graph.
+   *
+   * @param operator   binary graph to value operator
+   * @param otherGraph second input graph for operator
+   * @param &lt;T&gt; return type
+   * @return result of given operator
+   */
+  &lt;T&gt; T callForValue(BinaryBaseGraphToValueOperator&lt;LG, T&gt; operator, LG otherGraph);
+
+  /**
+   * Creates a base graph using the given unary graph operator.
+   *
+   * @param operator unary graph to graph operator
+   * @return result of given operator
+   */
+  default LG callForGraph(UnaryBaseGraphToBaseGraphOperator&lt;LG&gt; operator) {
+<span class="fc" id="L614">    return callForValue(operator);</span>
+  }
+
+  /**
+   * Creates a base graph from this graph and the input graph using the given binary operator.
+   *
+   * @param operator   binary graph to graph operator
+   * @param otherGraph other graph
+   * @return result of given operator
+   */
+  default LG callForGraph(BinaryBaseGraphToBaseGraphOperator&lt;LG&gt; operator, LG otherGraph) {
+<span class="fc" id="L625">    return callForValue(operator, otherGraph);</span>
+  }
+  /**
+   * Creates a graph collection from this graph using the given unary graph operator.
+   *
+   * @param operator unary graph to collection operator
+   * @return result of given operator
+   */
+  default GC callForCollection(UnaryBaseGraphToBaseGraphCollectionOperator&lt;LG, GC&gt; operator) {
+<span class="fc" id="L634">    return callForValue(operator);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

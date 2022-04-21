@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>InitGraphHeadWithLineage.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Gradoop Flink</a> &gt; <a href="index.source.html" class="el_package">org.gradoop.flink.model.impl.operators.matching.transactional.function</a> &gt; <span class="el_source">InitGraphHeadWithLineage.java</span></div><h1>InitGraphHeadWithLineage.java</h1><pre class="source lang-java linenums">/*
+ * Copyright © 2014 - 2021 Leipzig University (Database Research Group)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradoop.flink.model.impl.operators.matching.transactional.function;
+
+import org.apache.flink.api.common.functions.MapFunction;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
+import org.apache.flink.api.java.typeutils.TypeExtractor;
+import org.gradoop.common.model.api.entities.GraphHead;
+import org.gradoop.common.model.api.entities.GraphHeadFactory;
+import org.gradoop.common.model.impl.id.GradoopId;
+import org.gradoop.common.model.impl.properties.Properties;
+
+/**
+ * Initializes a new graph head from a given GradoopId and its lineage information, e.g. the
+ * source graph this one was created from.
+ *
+ * @param &lt;G&gt; graph head type
+ */
+public class InitGraphHeadWithLineage&lt;G extends GraphHead&gt;
+  implements MapFunction&lt;Tuple2&lt;GradoopId, GradoopId&gt;, G&gt;, ResultTypeQueryable&lt;G&gt; {
+  /**
+   * GraphHeadFactory
+   */
+  private final GraphHeadFactory&lt;G&gt; graphHeadFactory;
+
+  /**
+   * Constructor
+   *
+   * @param epgmGraphHeadFactory graph head factory
+   */
+<span class="fc" id="L46">  public InitGraphHeadWithLineage(GraphHeadFactory&lt;G&gt; epgmGraphHeadFactory) {</span>
+<span class="fc" id="L47">    this.graphHeadFactory = epgmGraphHeadFactory;</span>
+<span class="fc" id="L48">  }</span>
+
+  @Override
+  public G map(Tuple2&lt;GradoopId, GradoopId&gt; idTuple) {
+<span class="fc" id="L52">    G head = graphHeadFactory.initGraphHead(idTuple.f0);</span>
+<span class="fc" id="L53">    Properties properties = Properties.createWithCapacity(1);</span>
+<span class="fc" id="L54">    properties.set(&quot;lineage&quot;, idTuple.f1);</span>
+<span class="fc" id="L55">    head.setProperties(properties);</span>
+<span class="fc" id="L56">    return head;</span>
+  }
+
+  @Override
+  public TypeInformation&lt;G&gt; getProducedType() {
+<span class="fc" id="L61">    return TypeExtractor.createTypeInfo(graphHeadFactory.getType());</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

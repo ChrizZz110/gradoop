@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GraphCollection.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Gradoop Flink</a> &gt; <a href="index.source.html" class="el_package">org.gradoop.flink.model.impl.epgm</a> &gt; <span class="el_source">GraphCollection.java</span></div><h1>GraphCollection.java</h1><pre class="source lang-java linenums">/*
+ * Copyright © 2014 - 2021 Leipzig University (Database Research Group)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradoop.flink.model.impl.epgm;
+
+import org.apache.flink.api.java.DataSet;
+import org.gradoop.common.model.impl.pojo.EPGMEdge;
+import org.gradoop.common.model.impl.pojo.EPGMGraphHead;
+import org.gradoop.common.model.impl.pojo.EPGMVertex;
+import org.gradoop.flink.io.api.DataSink;
+import org.gradoop.flink.io.impl.gdl.GDLConsoleOutput;
+import org.gradoop.flink.model.api.epgm.BaseGraphCollection;
+import org.gradoop.flink.model.api.epgm.BaseGraphCollectionFactory;
+import org.gradoop.flink.model.api.epgm.BaseGraphFactory;
+import org.gradoop.flink.model.api.epgm.GraphCollectionOperators;
+import org.gradoop.flink.model.api.layouts.GraphCollectionLayout;
+import org.gradoop.flink.model.api.operators.BinaryBaseGraphCollectionToValueOperator;
+import org.gradoop.flink.model.api.operators.UnaryBaseGraphCollectionToValueOperator;
+import org.gradoop.flink.model.impl.layouts.transactional.tuples.GraphTransaction;
+import org.gradoop.flink.util.GradoopFlinkConfig;
+
+import java.io.IOException;
+import java.util.Objects;
+
+/**
+ * A graph collection graph is one of the base concepts of the Extended Property Graph Model. From
+ * a model perspective, the collection represents a set of logical graphs. From a data perspective
+ * this is reflected by providing three concepts:
+ * &lt;ul&gt;
+ *   &lt;li&gt;a set of graph heads assigned to the graphs in that collection&lt;/li&gt;
+ *   &lt;li&gt;a set of vertices which is the union of all vertex sets of the represented graphs&lt;/li&gt;
+ *   &lt;li&gt;a set of edges which is the union of all edge sets of the represented graphs&lt;/li&gt;
+ * &lt;/ul&gt;
+ * Furthermore, a graph collection provides operations that are performed on the underlying data.
+ * These operations result in either another graph collection or in a {@link LogicalGraph}.
+ * &lt;p&gt;
+ * A graph collection is wrapping a {@link GraphCollectionLayout} which defines, how the collection
+ * is represented in Apache Flink. Note that the GraphCollection also implements that interface and
+ * just forward the calls to the layout. This is just for convenience and API synchronicity.
+ */
+public class GraphCollection implements
+  BaseGraphCollection&lt;EPGMGraphHead, EPGMVertex, EPGMEdge, LogicalGraph, GraphCollection&gt;,
+  GraphCollectionOperators {
+  /**
+   * Layout for that graph collection
+   */
+  private final GraphCollectionLayout&lt;EPGMGraphHead, EPGMVertex, EPGMEdge&gt; layout;
+  /**
+   * Configuration
+   */
+  private final GradoopFlinkConfig config;
+
+  /**
+   * Creates a graph collection from the given arguments.
+   *
+   * @param layout the graph collection layout
+   * @param config the Gradoop Flink configuration
+   */
+  GraphCollection(GraphCollectionLayout&lt;EPGMGraphHead, EPGMVertex, EPGMEdge&gt; layout,
+<span class="fc" id="L72">    GradoopFlinkConfig config) {</span>
+<span class="fc" id="L73">    this.layout = Objects.requireNonNull(layout);</span>
+<span class="fc" id="L74">    this.config = Objects.requireNonNull(config);</span>
+<span class="fc" id="L75">  }</span>
+
+  //----------------------------------------------------------------------------
+  // Data methods
+  //----------------------------------------------------------------------------
+
+  @Override
+  public boolean isGVELayout() {
+<span class="nc" id="L83">    return layout.isGVELayout();</span>
+  }
+
+  @Override
+  public boolean isIndexedGVELayout() {
+<span class="nc" id="L88">    return layout.isIndexedGVELayout();</span>
+  }
+
+  @Override
+  public boolean isTransactionalLayout() {
+<span class="fc" id="L93">    return layout.isTransactionalLayout();</span>
+  }
+
+  @Override
+  public DataSet&lt;EPGMVertex&gt; getVertices() {
+<span class="fc" id="L98">    return layout.getVertices();</span>
+  }
+
+  @Override
+  public DataSet&lt;EPGMVertex&gt; getVerticesByLabel(String label) {
+<span class="nc" id="L103">    return layout.getVerticesByLabel(label);</span>
+  }
+
+  @Override
+  public DataSet&lt;EPGMEdge&gt; getEdges() {
+<span class="fc" id="L108">    return layout.getEdges();</span>
+  }
+
+  @Override
+  public DataSet&lt;EPGMEdge&gt; getEdgesByLabel(String label) {
+<span class="nc" id="L113">    return layout.getEdgesByLabel(label);</span>
+  }
+
+  @Override
+  public DataSet&lt;EPGMGraphHead&gt; getGraphHeads() {
+<span class="fc" id="L118">    return layout.getGraphHeads();</span>
+  }
+
+  @Override
+  public DataSet&lt;EPGMGraphHead&gt; getGraphHeadsByLabel(String label) {
+<span class="nc" id="L123">    return layout.getGraphHeadsByLabel(label);</span>
+  }
+
+  @Override
+  public DataSet&lt;GraphTransaction&gt; getGraphTransactions() {
+<span class="fc" id="L128">    return layout.getGraphTransactions();</span>
+  }
+
+  //----------------------------------------------------------------------------
+  // Auxiliary Operators
+  //----------------------------------------------------------------------------
+
+  @Override
+  public &lt;T&gt; T callForValue(UnaryBaseGraphCollectionToValueOperator&lt;GraphCollection, T&gt; operator) {
+<span class="fc" id="L137">    return operator.execute(this);</span>
+  }
+
+  @Override
+  public &lt;T&gt; T callForValue(BinaryBaseGraphCollectionToValueOperator&lt;GraphCollection, T&gt; operator,
+                            GraphCollection otherCollection) {
+<span class="fc" id="L143">    return operator.execute(this, otherCollection);</span>
+  }
+
+  //----------------------------------------------------------------------------
+  // Utility methods
+  //----------------------------------------------------------------------------
+
+  @Override
+  public GradoopFlinkConfig getConfig() {
+<span class="fc" id="L152">    return config;</span>
+  }
+
+  @Override
+  public BaseGraphCollectionFactory&lt;
+    EPGMGraphHead, EPGMVertex, EPGMEdge, LogicalGraph, GraphCollection&gt; getFactory() {
+<span class="fc" id="L158">    return config.getGraphCollectionFactory();</span>
+  }
+
+  @Override
+  public BaseGraphFactory&lt;EPGMGraphHead, EPGMVertex, EPGMEdge, LogicalGraph, GraphCollection&gt;
+  getGraphFactory() {
+<span class="fc" id="L164">    return config.getLogicalGraphFactory();</span>
+  }
+
+  @Override
+  public void writeTo(DataSink dataSink) throws IOException {
+<span class="nc" id="L169">    dataSink.write(this);</span>
+<span class="nc" id="L170">  }</span>
+
+  @Override
+  public void writeTo(DataSink dataSink, boolean overWrite) throws IOException {
+<span class="nc" id="L174">    dataSink.write(this, overWrite);</span>
+<span class="nc" id="L175">  }</span>
+
+  /**
+   * Prints this graph collection to the console.
+   *
+   * @throws Exception forwarded DataSet print() Exception.
+   */
+  public void print() throws Exception {
+<span class="nc" id="L183">    GDLConsoleOutput.print(this);</span>
+<span class="nc" id="L184">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

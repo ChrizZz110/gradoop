@@ -1,0 +1,799 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Grouping.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Gradoop Flink</a> &gt; <a href="index.source.html" class="el_package">org.gradoop.flink.model.impl.operators.grouping</a> &gt; <span class="el_source">Grouping.java</span></div><h1>Grouping.java</h1><pre class="source lang-java linenums">/*
+ * Copyright © 2014 - 2021 Leipzig University (Database Research Group)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradoop.flink.model.impl.operators.grouping;
+
+import org.apache.flink.api.java.DataSet;
+import org.apache.flink.api.java.operators.UnsortedGrouping;
+import org.gradoop.common.model.api.entities.Edge;
+import org.gradoop.common.model.api.entities.EdgeFactory;
+import org.gradoop.common.model.api.entities.GraphHead;
+import org.gradoop.common.model.api.entities.Vertex;
+import org.gradoop.common.util.GradoopConstants;
+import org.gradoop.flink.model.api.epgm.BaseGraph;
+import org.gradoop.flink.model.api.epgm.BaseGraphCollection;
+import org.gradoop.flink.model.api.functions.AggregateFunction;
+import org.gradoop.flink.model.api.operators.UnaryBaseGraphToBaseGraphOperator;
+import org.gradoop.flink.model.impl.epgm.LogicalGraph;
+import org.gradoop.flink.model.impl.functions.filters.Not;
+import org.gradoop.flink.model.impl.functions.utils.LeftWhenRightIsNull;
+import org.gradoop.flink.model.impl.operators.grouping.functions.BuildEdgeGroupItem;
+import org.gradoop.flink.model.impl.operators.grouping.functions.CombineEdgeGroupItems;
+import org.gradoop.flink.model.impl.operators.grouping.functions.LabelGroupFilter;
+import org.gradoop.flink.model.impl.operators.grouping.functions.ReduceEdgeGroupItems;
+import org.gradoop.flink.model.impl.operators.grouping.functions.SetVertexAsSuperVertex;
+import org.gradoop.flink.model.impl.operators.grouping.functions.UpdateEdgeGroupItem;
+import org.gradoop.flink.model.impl.operators.grouping.tuples.EdgeGroupItem;
+import org.gradoop.flink.model.impl.operators.grouping.tuples.LabelGroup;
+import org.gradoop.flink.model.impl.operators.grouping.tuples.VertexGroupItem;
+import org.gradoop.flink.model.impl.operators.grouping.tuples.VertexWithSuperVertex;
+import org.gradoop.flink.model.impl.operators.keyedgrouping.KeyedGroupingUtils;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+/**
+ * The grouping operator determines a structural grouping of vertices and edges
+ * to condense a graph and thus help to uncover insights about patterns and
+ * statistics hidden in the graph.
+ * &lt;p&gt;
+ * The graph grouping operator represents every vertex group by a single super
+ * vertex in the resulting graph; (super) edges between vertices in the
+ * resulting graph represent a group of edges between the vertex group members
+ * of the original graph. Grouping is defined by specifying grouping keys for
+ * vertices and edges, respectively, similarly as for GROUP BY in SQL.
+ * &lt;p&gt;
+ * Consider the following example:
+ * &lt;p&gt;
+ * Input graph:
+ * &lt;p&gt;
+ * Vertices:&lt;br&gt;
+ * (0, &quot;Person&quot;, {city: L})&lt;br&gt;
+ * (1, &quot;Person&quot;, {city: L})&lt;br&gt;
+ * (2, &quot;Person&quot;, {city: D})&lt;br&gt;
+ * (3, &quot;Person&quot;, {city: D})&lt;br&gt;
+ * &lt;p&gt;
+ * Edges:{(0,1), (1,0), (1,2), (2,1), (2,3), (3,2)}
+ * &lt;p&gt;
+ * Output graph (grouped on vertex property &quot;city&quot;):
+ * &lt;p&gt;
+ * Vertices:&lt;br&gt;
+ * (0, &quot;Person&quot;, {city: L, count: 2})
+ * (2, &quot;Person&quot;, {city: D, count: 2})
+ * &lt;p&gt;
+ * Edges:&lt;br&gt;
+ * ((0, 0), {count: 2}) // 2 intra-edges in L&lt;br&gt;
+ * ((2, 2), {count: 2}) // 2 intra-edges in L&lt;br&gt;
+ * ((0, 2), {count: 1}) // 1 inter-edge from L to D&lt;br&gt;
+ * ((2, 0), {count: 1}) // 1 inter-edge from D to L&lt;br&gt;
+ * &lt;p&gt;
+ * In addition to vertex properties, grouping is also possible on edge
+ * properties, vertex- and edge labels as well as combinations of those.
+ *
+ * @param &lt;G&gt;  The graph head type.
+ * @param &lt;V&gt;  The vertex type.
+ * @param &lt;E&gt;  The edge type.
+ * @param &lt;LG&gt; The type of the graph.
+ * @param &lt;GC&gt; The type of the graph collection.
+ */
+public abstract class Grouping&lt;
+  G extends GraphHead,
+  V extends Vertex,
+  E extends Edge,
+  LG extends BaseGraph&lt;G, V, E, LG, GC&gt;,
+  GC extends BaseGraphCollection&lt;G, V, E, LG, GC&gt;&gt;
+  implements UnaryBaseGraphToBaseGraphOperator&lt;LG&gt; {
+  /**
+   * Used as property key to declare a label based grouping.
+   * &lt;p&gt;
+   * See {@link LogicalGraph#groupBy(List, List, List, List, GroupingStrategy)}
+   */
+  public static final String LABEL_SYMBOL = &quot;:label&quot;;
+  /**
+   * Used to verify if a grouping key is used for all vertices.
+   */
+  public static final String DEFAULT_VERTEX_LABEL_GROUP = &quot;:defaultVertexLabelGroup&quot;;
+  /**
+   * Used to verify if a grouping key is used for all edges.
+   */
+  public static final String DEFAULT_EDGE_LABEL_GROUP = &quot;:defaultEdgeLabelGroup&quot;;
+  /**
+   * True if vertices shall be grouped using their label.
+   */
+  private final boolean useVertexLabels;
+  /**
+   * True if edges shall be grouped using their label.
+   */
+  private final boolean useEdgeLabels;
+  /**
+   * Stores grouping properties and aggregators for vertex labels.
+   */
+  private final List&lt;LabelGroup&gt; vertexLabelGroups;
+
+  /**
+   * Stores grouping properties and aggregators for edge labels.
+   */
+  private final List&lt;LabelGroup&gt; edgeLabelGroups;
+
+  /**
+   * A flag that indicates whether vertices that are not member of any labelGroup are retained
+   * as they are to supervertices, including their edges.
+   * If set to false, said vertices will be collapsed into a single group/ supervertex.
+   */
+  private final boolean retainVerticesWithoutGroup;
+
+  /**
+   * Creates grouping operator instance.
+   *
+   * @param useVertexLabels             group on vertex label true/false
+   * @param useEdgeLabels               group on edge label true/false
+   * @param vertexLabelGroups           stores grouping properties for vertex labels
+   * @param edgeLabelGroups             stores grouping properties for edge labels
+   * @param retainVerticesWithoutGroup  a flag to retain vertices that are not affected by the
+   *                                    grouping
+   */
+  Grouping(boolean useVertexLabels, boolean useEdgeLabels, List&lt;LabelGroup&gt; vertexLabelGroups,
+<span class="fc" id="L149">    List&lt;LabelGroup&gt; edgeLabelGroups, boolean retainVerticesWithoutGroup) {</span>
+<span class="fc" id="L150">    this.useVertexLabels = useVertexLabels;</span>
+<span class="fc" id="L151">    this.useEdgeLabels = useEdgeLabels;</span>
+<span class="fc" id="L152">    this.vertexLabelGroups = vertexLabelGroups;</span>
+<span class="fc" id="L153">    this.edgeLabelGroups = edgeLabelGroups;</span>
+<span class="fc" id="L154">    this.retainVerticesWithoutGroup = retainVerticesWithoutGroup;</span>
+<span class="fc" id="L155">  }</span>
+
+  @Override
+  public LG execute(LG graph) {
+    LG result;
+
+<span class="pc bpc" id="L161" title="1 of 2 branches missed.">    if (!useVertexProperties() &amp;&amp;</span>
+<span class="nc bnc" id="L162" title="All 2 branches missed.">      !useEdgeProperties() &amp;&amp;</span>
+<span class="nc bnc" id="L163" title="All 2 branches missed.">      !useVertexLabels() &amp;&amp;</span>
+<span class="nc bnc" id="L164" title="All 2 branches missed.">      !useEdgeLabels()) {</span>
+<span class="nc" id="L165">      result = graph;</span>
+    } else {
+<span class="fc" id="L167">      result = groupInternal(graph);</span>
+    }
+<span class="fc" id="L169">    return result;</span>
+  }
+
+  /**
+   * Returns true if vertex properties shall be used for grouping.
+   *
+   * @return true iff vertex properties shall be used for grouping
+   */
+  protected boolean useVertexProperties() {
+<span class="pc bpc" id="L178" title="1 of 2 branches missed.">    return !vertexLabelGroups.isEmpty();</span>
+  }
+
+  /**
+   * True, iff vertex labels shall be used for grouping.
+   *
+   * @return true, iff vertex labels shall be used for grouping
+   */
+  protected boolean useVertexLabels() {
+<span class="fc" id="L187">    return useVertexLabels;</span>
+  }
+
+  /**
+   * Returns true if edge properties shall be used for grouping.
+   *
+   * @return true, iff edge properties shall be used for grouping
+   */
+  protected boolean useEdgeProperties() {
+<span class="pc bpc" id="L196" title="1 of 2 branches missed.">    return !edgeLabelGroups.isEmpty();</span>
+  }
+
+  /**
+   * True, if edge labels shall be used for grouping.
+   *
+   * @return true, iff edge labels shall be used for grouping
+   */
+  protected boolean useEdgeLabels() {
+<span class="fc" id="L205">    return useEdgeLabels;</span>
+  }
+
+  /**
+   * True, iff vertices without labels will be converted to individual groups/ supervertices.
+   * False, iff vertices without labels will be collapsed into a single group/ supervertice.
+   *
+   * @return true, iff vertices will be converted
+   */
+  protected boolean isRetainingVerticesWithoutGroup() {
+<span class="fc" id="L215">    return retainVerticesWithoutGroup;</span>
+  }
+
+  /**
+   * Returns tuple which contains the properties used for a specific vertex label.
+   *
+   * @return vertex label groups
+   */
+  public List&lt;LabelGroup&gt; getVertexLabelGroups() {
+<span class="fc" id="L224">    return vertexLabelGroups;</span>
+  }
+
+  /**
+   * Returns tuple which contains the properties used for a specific edge label.
+   *
+   * @return edge label groups
+   */
+  public List&lt;LabelGroup&gt; getEdgeLabelGroups() {
+<span class="fc" id="L233">    return edgeLabelGroups;</span>
+  }
+
+  /**
+   * Group vertices by either vertex label, vertex property or both.
+   *
+   * @param groupVertices dataset containing vertex representation for grouping
+   * @return unsorted vertex grouping
+   */
+  protected UnsortedGrouping&lt;VertexGroupItem&gt; groupVertices(
+    DataSet&lt;VertexGroupItem&gt; groupVertices) {
+    UnsortedGrouping&lt;VertexGroupItem&gt; vertexGrouping;
+<span class="pc bpc" id="L245" title="1 of 4 branches missed.">    if (useVertexLabels() &amp;&amp; useVertexProperties()) {</span>
+<span class="fc" id="L246">      vertexGrouping = groupVertices.groupBy(2, 3);</span>
+<span class="pc bpc" id="L247" title="1 of 2 branches missed.">    } else if (useVertexLabels()) {</span>
+<span class="nc" id="L248">      vertexGrouping = groupVertices.groupBy(2);</span>
+    } else {
+<span class="fc" id="L250">      vertexGrouping = groupVertices.groupBy(3);</span>
+    }
+<span class="fc" id="L252">    return vertexGrouping;</span>
+  }
+
+  /**
+   * Groups edges based on the algorithm parameters.
+   *
+   * @param edges input graph edges
+   * @return grouped edges
+   */
+  protected UnsortedGrouping&lt;EdgeGroupItem&gt; groupEdges(DataSet&lt;EdgeGroupItem&gt; edges) {
+    UnsortedGrouping&lt;EdgeGroupItem&gt; groupedEdges;
+<span class="pc bpc" id="L263" title="1 of 4 branches missed.">    if (useEdgeProperties() &amp;&amp; useEdgeLabels()) {</span>
+<span class="fc" id="L264">      groupedEdges = edges.groupBy(0, 1, 2, 3);</span>
+<span class="pc bpc" id="L265" title="1 of 2 branches missed.">    } else if (useEdgeLabels()) {</span>
+<span class="nc" id="L266">      groupedEdges = edges.groupBy(0, 1, 2);</span>
+<span class="pc bpc" id="L267" title="1 of 2 branches missed.">    } else if (useEdgeProperties()) {</span>
+<span class="fc" id="L268">      groupedEdges = edges.groupBy(0, 1, 3);</span>
+    } else {
+<span class="nc" id="L270">      groupedEdges = edges.groupBy(0, 1);</span>
+    }
+<span class="fc" id="L272">    return groupedEdges;</span>
+  }
+
+  /**
+   * Build super edges by joining them with vertices and their super vertex.
+   *
+   * @param edgeFactory edgeFactory
+   * @param edgesToGroup input edgesToGroup
+   * @param vertexToRepresentativeMap dataset containing tuples of vertex id and super vertex id
+   * @return super edges
+   */
+  protected DataSet&lt;E&gt; buildSuperEdges(
+    EdgeFactory&lt;E&gt; edgeFactory,
+    DataSet&lt;E&gt; edgesToGroup,
+    DataSet&lt;VertexWithSuperVertex&gt; vertexToRepresentativeMap) {
+
+<span class="fc" id="L288">    DataSet&lt;EdgeGroupItem&gt; edges = edgesToGroup</span>
+      // build edge group items
+<span class="fc" id="L290">      .flatMap(new BuildEdgeGroupItem&lt;&gt;(useEdgeLabels(), getEdgeLabelGroups()))</span>
+      // join edges with vertex-group-map on source-id == vertex-id
+<span class="fc" id="L292">      .join(vertexToRepresentativeMap)</span>
+<span class="fc" id="L293">      .where(0).equalTo(0)</span>
+<span class="fc" id="L294">      .with(new UpdateEdgeGroupItem(0))</span>
+<span class="fc" id="L295">      .withForwardedFieldsFirst(&quot;f1;f2;f3;f4&quot;)</span>
+<span class="fc" id="L296">      .withForwardedFieldsSecond(&quot;f1-&gt;f0&quot;)</span>
+      // join result with vertex-group-map on target-id == vertex-id
+<span class="fc" id="L298">      .join(vertexToRepresentativeMap)</span>
+<span class="fc" id="L299">      .where(1).equalTo(0)</span>
+<span class="fc" id="L300">      .with(new UpdateEdgeGroupItem(1))</span>
+<span class="fc" id="L301">      .withForwardedFieldsFirst(&quot;f0;f2;f3;f4&quot;)</span>
+<span class="fc" id="L302">      .withForwardedFieldsSecond(&quot;f1-&gt;f1&quot;);</span>
+
+    // group + combine
+<span class="fc" id="L305">    DataSet&lt;EdgeGroupItem&gt; combinedEdges = groupEdges(edges)</span>
+<span class="fc" id="L306">      .combineGroup(new CombineEdgeGroupItems(useEdgeLabels()));</span>
+
+    // group + reduce + build final edges
+<span class="fc" id="L309">    return groupEdges(combinedEdges)</span>
+<span class="fc" id="L310">      .reduceGroup(new ReduceEdgeGroupItems&lt;&gt;(</span>
+<span class="fc" id="L311">        useEdgeLabels(),</span>
+        edgeFactory));
+  }
+
+  /**
+   * Overridden by concrete implementations.
+   *
+   * @param graph input graphe
+   * @return grouped output graph
+   */
+  protected abstract LG groupInternal(LG graph);
+
+  /**
+   * Returns a verified subgraph that only includes vertices that are not member of any labelGroups.
+   *
+   * @param graph to filter
+   * @return subgraph
+   */
+  LG getSubgraphOfRetainedVertices(LG graph) {
+<span class="fc" id="L330">    return graph.vertexInducedSubgraph(</span>
+<span class="fc" id="L331">      new Not&lt;&gt;(new LabelGroupFilter&lt;&gt;(getVertexLabelGroups(), useVertexLabels())));</span>
+  }
+
+  /**
+   * Removes all edges of {@code edgesToSubtract} from {@code edges}.
+   *
+   * @param edges           set of edges
+   * @param edgesToSubtract set of edges to be removed
+   * @return subtracted set of edges
+   */
+  DataSet&lt;E&gt; subtractEdges(DataSet&lt;E&gt; edges, DataSet&lt;E&gt; edgesToSubtract) {
+<span class="fc" id="L342">    return edges</span>
+<span class="fc" id="L343">      .leftOuterJoin(edgesToSubtract)</span>
+<span class="fc" id="L344">      .where(&quot;sourceId&quot;, &quot;targetId&quot;)</span>
+<span class="fc" id="L345">      .equalTo(&quot;sourceId&quot;, &quot;targetId&quot;)</span>
+<span class="fc" id="L346">      .with(new LeftWhenRightIsNull&lt;&gt;());</span>
+  }
+
+  /**
+   * Is used when {@link Grouping#retainVerticesWithoutGroup} is set.
+   * To add support for grouped edges between retained vertices and supervertices,
+   * retained vertices are singleton groups and are their group representatives themselves.
+   *
+   * @param vertexToRepresentativeMap vertex representative map to add to
+   * @param retainedVertices retained vertices
+   * @return updated vertexToRepresentativeMap
+   */
+  DataSet&lt;VertexWithSuperVertex&gt; updateVertexRepresentatives(
+    DataSet&lt;VertexWithSuperVertex&gt; vertexToRepresentativeMap, DataSet&lt;V&gt; retainedVertices) {
+<span class="fc" id="L360">    return vertexToRepresentativeMap</span>
+<span class="fc" id="L361">      .union(retainedVertices.map(new SetVertexAsSuperVertex&lt;&gt;()));</span>
+  }
+
+  /**
+   * Used for building a grouping operator instance.
+   */
+  public static final class GroupingBuilder {
+
+    /**
+     * Grouping strategy
+     */
+    private GroupingStrategy strategy;
+    /**
+     * True, if vertex labels shall be considered.
+     */
+    private boolean useVertexLabel;
+
+    /**
+     * True, iff edge labels shall be considered.
+     */
+    private boolean useEdgeLabel;
+    /**
+     * Stores grouping keys for a specific vertex label.
+     */
+    private List&lt;LabelGroup&gt; vertexLabelGroups;
+
+    /**
+     * Stores grouping keys for a specific edge label.
+     */
+    private List&lt;LabelGroup&gt; edgeLabelGroups;
+
+    /**
+     * Default vertex label group.
+     */
+    private LabelGroup defaultVertexLabelGroup;
+
+    /**
+     * Default edge label group.
+     */
+    private LabelGroup defaultEdgeLabelGroup;
+
+    /**
+     * List of all global vertex aggregate functions.
+     */
+    private List&lt;AggregateFunction&gt; globalVertexAggregateFunctions;
+
+    /**
+     * List of all global edge aggregate functions.
+     */
+    private List&lt;AggregateFunction&gt; globalEdgeAggregateFunctions;
+
+    /**
+     * A flag that indicates whether vertices that are not member of any labelGroup are retained
+     * as they are to supervertices, including their edges.
+     * If set to false, said vertices will be collapsed into a single group/ supervertex.
+     */
+    private boolean retainVerticesWithoutGroup;
+
+    /**
+     * Creates a new grouping builder
+     */
+<span class="fc" id="L422">    public GroupingBuilder() {</span>
+<span class="fc" id="L423">      this.useVertexLabel               = false;</span>
+<span class="fc" id="L424">      this.useEdgeLabel                 = false;</span>
+<span class="fc" id="L425">      this.vertexLabelGroups            = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L426">      this.edgeLabelGroups              = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L427">      this.globalVertexAggregateFunctions = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L428">      this.globalEdgeAggregateFunctions = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L429">      this.defaultVertexLabelGroup      = new LabelGroup(</span>
+        Grouping.DEFAULT_VERTEX_LABEL_GROUP, GradoopConstants.DEFAULT_VERTEX_LABEL);
+<span class="fc" id="L431">      this.defaultEdgeLabelGroup        = new LabelGroup(</span>
+        Grouping.DEFAULT_EDGE_LABEL_GROUP, GradoopConstants.DEFAULT_EDGE_LABEL);
+
+<span class="fc" id="L434">      vertexLabelGroups.add(defaultVertexLabelGroup);</span>
+<span class="fc" id="L435">      edgeLabelGroups.add(defaultEdgeLabelGroup);</span>
+<span class="fc" id="L436">    }</span>
+
+    /**
+     * Set the grouping strategy. See {@link GroupingStrategy}.
+     *
+     * @param strategy grouping strategy
+     * @return this builder
+     */
+    public GroupingBuilder setStrategy(GroupingStrategy strategy) {
+<span class="fc" id="L445">      Objects.requireNonNull(strategy);</span>
+<span class="fc" id="L446">      this.strategy = strategy;</span>
+<span class="fc" id="L447">      return this;</span>
+    }
+
+    /**
+     * Set {@link Grouping#retainVerticesWithoutGroup} to true, vertices that are not member of any
+     * labelGroup are retained as they are to supervertices, including their edges.
+     *
+     * @return this builder
+     */
+    public GroupingBuilder retainVerticesWithoutGroup() {
+<span class="fc" id="L457">      this.retainVerticesWithoutGroup = true;</span>
+<span class="fc" id="L458">      return this;</span>
+    }
+
+    /**
+     * Adds a property key to the vertex grouping keys for vertices which do not have a specific
+     * label group.
+     *
+     * @param key property key
+     * @return this builder
+     */
+    public GroupingBuilder addVertexGroupingKey(String key) {
+<span class="fc" id="L469">      Objects.requireNonNull(key);</span>
+<span class="fc bfc" id="L470" title="All 2 branches covered.">      if (key.equals(Grouping.LABEL_SYMBOL)) {</span>
+<span class="fc" id="L471">        useVertexLabel(true);</span>
+      } else {
+<span class="fc" id="L473">        defaultVertexLabelGroup.addPropertyKey(key);</span>
+      }
+<span class="fc" id="L475">      return this;</span>
+    }
+
+    /**
+     * Adds a list of property keys to the vertex grouping keys for vertices which do not have a
+     * specific label group.
+     *
+     * @param keys property keys
+     * @return this builder
+     */
+    public GroupingBuilder addVertexGroupingKeys(List&lt;String&gt; keys) {
+<span class="fc" id="L486">      Objects.requireNonNull(keys);</span>
+<span class="fc bfc" id="L487" title="All 2 branches covered.">      for (String key : keys) {</span>
+<span class="fc" id="L488">        this.addVertexGroupingKey(key);</span>
+<span class="fc" id="L489">      }</span>
+<span class="fc" id="L490">      return this;</span>
+    }
+
+    /**
+     * Adds a property key to the edge grouping keys for edges which do not have a specific
+     * label group.
+     *
+     * @param key property key
+     * @return this builder
+     */
+    public GroupingBuilder addEdgeGroupingKey(String key) {
+<span class="fc" id="L501">      Objects.requireNonNull(key);</span>
+<span class="fc bfc" id="L502" title="All 2 branches covered.">      if (key.equals(Grouping.LABEL_SYMBOL)) {</span>
+<span class="fc" id="L503">        useEdgeLabel(true);</span>
+      } else {
+<span class="fc" id="L505">        defaultEdgeLabelGroup.addPropertyKey(key);</span>
+      }
+<span class="fc" id="L507">      return this;</span>
+    }
+
+    /**
+     * Adds a list of property keys to the edge grouping keys for edges  which do not have a
+     * specific label group.
+     *
+     * @param keys property keys
+     * @return this builder
+     */
+    public GroupingBuilder addEdgeGroupingKeys(List&lt;String&gt; keys) {
+<span class="fc" id="L518">      Objects.requireNonNull(keys);</span>
+<span class="fc bfc" id="L519" title="All 2 branches covered.">      for (String key : keys) {</span>
+<span class="fc" id="L520">        this.addEdgeGroupingKey(key);</span>
+<span class="fc" id="L521">      }</span>
+<span class="fc" id="L522">      return this;</span>
+    }
+
+    /**
+     * Adds a vertex label group which defines the grouping keys for a specific label.
+     * Note that a label may be used multiple times.
+     *
+     * @param label vertex label
+     * @param groupingKeys keys used for grouping
+     * @return this builder
+     */
+    public GroupingBuilder addVertexLabelGroup(
+      String label,
+      List&lt;String&gt; groupingKeys) {
+<span class="fc" id="L536">      return addVertexLabelGroup(label, label, groupingKeys);</span>
+    }
+
+    /**
+     * Adds a vertex label group which defines the grouping keys and the aggregate functions for a
+     * specific label. Note that a label may be used multiple times.
+     *
+     * @param label vertex label
+     * @param groupingKeys keys used for grouping
+     * @param aggregateFunctions vertex aggregate functions
+     * @return this builder
+     */
+    public GroupingBuilder addVertexLabelGroup(
+      String label,
+      List&lt;String&gt; groupingKeys,
+      List&lt;AggregateFunction&gt; aggregateFunctions) {
+<span class="fc" id="L552">      return addVertexLabelGroup(label, label, groupingKeys, aggregateFunctions);</span>
+    }
+
+    /**
+     * Adds a vertex label group which defines the grouping keys for a specific label.
+     * Note that a label may be used multiple times.
+     *
+     * @param label vertex label
+     * @param superVertexLabel label of the group and therefore of the new super vertex
+     * @param groupingKeys keys used for grouping
+     * @return this builder
+     */
+    public GroupingBuilder addVertexLabelGroup(
+      String label,
+      String superVertexLabel,
+      List&lt;String&gt; groupingKeys) {
+<span class="fc" id="L568">      return addVertexLabelGroup(label, superVertexLabel, groupingKeys, new ArrayList&lt;&gt;());</span>
+    }
+
+    /**
+     * Adds a vertex label group which defines the grouping keys and the aggregate functions for a
+     * specific label. Note that a label may be used multiple times.
+     *
+     * @param label vertex label
+     * @param superVertexLabel label of the group and therefore of the new super vertex
+     * @param groupingKeys keys used for grouping
+     * @param aggregateFunctions vertex aggregate functions
+     * @return this builder
+     */
+    public GroupingBuilder addVertexLabelGroup(
+      String label,
+      String superVertexLabel,
+      List&lt;String&gt; groupingKeys,
+      List&lt;AggregateFunction&gt; aggregateFunctions) {
+<span class="fc" id="L586">      vertexLabelGroups.add(new LabelGroup(label, superVertexLabel, groupingKeys,</span>
+        aggregateFunctions));
+<span class="fc" id="L588">      return this;</span>
+    }
+
+    /**
+     * Adds a vertex label group which defines the grouping keys for a specific label.
+     * Note that a label may be used multiple times.
+     *
+     * @param label edge label
+     * @param groupingKeys keys used for grouping
+     * @return this builder
+     */
+    public GroupingBuilder addEdgeLabelGroup(
+      String label,
+      List&lt;String&gt; groupingKeys) {
+<span class="fc" id="L602">      return addEdgeLabelGroup(label, label, groupingKeys);</span>
+    }
+
+    /**
+     * Adds a vertex label group which defines the grouping keys and the aggregate functions for a
+     * specific label. Note that a label may be used multiple times.
+     *
+     * @param label edge label
+     * @param groupingKeys keys used for grouping
+     * @param aggregateFunctions edge aggregate functions
+     * @return this builder
+     */
+    public GroupingBuilder addEdgeLabelGroup(
+      String label,
+      List&lt;String&gt; groupingKeys,
+      List&lt;AggregateFunction&gt; aggregateFunctions) {
+<span class="fc" id="L618">      return addEdgeLabelGroup(label, label, groupingKeys, aggregateFunctions);</span>
+    }
+
+    /**
+     * Adds a vertex label group which defines the grouping keys for a specific label.
+     * Note that a label may be used multiple times.
+     *
+     * @param label edge label
+     * @param superEdgeLabel label of the group and therefore of the new super edge
+     * @param groupingKeys keys used for grouping
+     * @return this builder
+     */
+    public GroupingBuilder addEdgeLabelGroup(
+      String label,
+      String superEdgeLabel,
+      List&lt;String&gt; groupingKeys) {
+<span class="fc" id="L634">      return addEdgeLabelGroup(label, superEdgeLabel, groupingKeys, new ArrayList&lt;&gt;());</span>
+    }
+
+    /**
+     * Adds a vertex label group which defines the grouping keys and the aggregate functions for a
+     * specific label. Note that a label may be used multiple times.
+     *
+     * @param label edge label
+     * @param superEdgeLabel label of the group and therefore of the new super edge
+     * @param groupingKeys keys used for grouping
+     * @param aggregateFunctions edge aggregate functions
+     * @return this builder
+     */
+    public GroupingBuilder addEdgeLabelGroup(
+      String label,
+      String superEdgeLabel,
+      List&lt;String&gt; groupingKeys,
+      List&lt;AggregateFunction&gt; aggregateFunctions) {
+<span class="fc" id="L652">      edgeLabelGroups.add(new LabelGroup(label, superEdgeLabel, groupingKeys, aggregateFunctions));</span>
+<span class="fc" id="L653">      return this;</span>
+    }
+
+    /**
+     * Define, if the vertex label shall be used for grouping vertices.
+     *
+     * @param useVertexLabel true, iff vertex label shall be used for grouping
+     * @return this builder
+     */
+    public GroupingBuilder useVertexLabel(boolean useVertexLabel) {
+<span class="fc" id="L663">      this.useVertexLabel = useVertexLabel;</span>
+<span class="fc" id="L664">      return this;</span>
+    }
+
+    /**
+     * Define, if the edge label shall be used for grouping edges.
+     *
+     * @param useEdgeLabel true, iff edge label shall be used for grouping
+     * @return this builder
+     */
+    public GroupingBuilder useEdgeLabel(boolean useEdgeLabel) {
+<span class="fc" id="L674">      this.useEdgeLabel = useEdgeLabel;</span>
+<span class="fc" id="L675">      return this;</span>
+    }
+
+    /**
+     * Add an aggregate function which is applied on all vertices represented by a single super
+     * vertex which do not have a specific label group.
+     *
+     * @param aggregateFunction vertex aggregate function
+     * @return this builder
+     */
+    public GroupingBuilder addVertexAggregateFunction(AggregateFunction aggregateFunction) {
+<span class="fc" id="L686">      Objects.requireNonNull(aggregateFunction, &quot;Aggregate function must not be null&quot;);</span>
+<span class="fc" id="L687">      defaultVertexLabelGroup.addAggregateFunction(aggregateFunction);</span>
+<span class="fc" id="L688">      return this;</span>
+    }
+
+    /**
+     * Add an aggregate function which is applied on all vertices represented by a single super
+     * vertex.
+     *
+     * @param aggregateFunction vertex aggregate function
+     * @return this builder
+     */
+    public GroupingBuilder addGlobalVertexAggregateFunction(
+      AggregateFunction aggregateFunction) {
+<span class="fc" id="L700">      Objects.requireNonNull(aggregateFunction, &quot;Aggregate function must not be null&quot;);</span>
+<span class="fc" id="L701">      globalVertexAggregateFunctions.add(aggregateFunction);</span>
+<span class="fc" id="L702">      return this;</span>
+    }
+
+    /**
+     * Add an aggregate function which is applied on all edges represented by a single super edge.
+     *
+     * @param aggregateFunction edge aggregate function
+     * @return this builder
+     */
+    public GroupingBuilder addGlobalEdgeAggregateFunction(AggregateFunction aggregateFunction) {
+<span class="fc" id="L712">      Objects.requireNonNull(aggregateFunction, &quot;Aggregate function must not be null&quot;);</span>
+<span class="fc" id="L713">      globalEdgeAggregateFunctions.add(aggregateFunction);</span>
+<span class="fc" id="L714">      return this;</span>
+    }
+
+    /**
+     * Add an aggregate function which is applied on all edges represented by a single super edge
+     * which do not have a specific label group.
+     *
+     * @param aggregateFunction edge aggregate function
+     * @return this builder
+     */
+    public GroupingBuilder addEdgeAggregateFunction(AggregateFunction aggregateFunction) {
+<span class="fc" id="L725">      Objects.requireNonNull(aggregateFunction, &quot;Aggregate function must not be null&quot;);</span>
+<span class="fc" id="L726">      defaultEdgeLabelGroup.addAggregateFunction(aggregateFunction);</span>
+<span class="fc" id="L727">      return this;</span>
+    }
+
+    /**
+     * Creates a new grouping operator instance based on the configured
+     * parameters.
+     *
+     * @param &lt;G&gt; The graph head type.
+     * @param &lt;V&gt; The vertex type.
+     * @param &lt;E&gt; The edge type.
+     * @param &lt;LG&gt; The type of the graph.
+     * @param &lt;GC&gt; The type of the graph collection.
+     * @return grouping operator instance
+     */
+    public &lt;
+      G extends GraphHead,
+      V extends Vertex,
+      E extends Edge,
+      LG extends BaseGraph&lt;G, V, E, LG, GC&gt;,
+      GC extends BaseGraphCollection&lt;G, V, E, LG, GC&gt;&gt; UnaryBaseGraphToBaseGraphOperator&lt;LG&gt; build() {
+
+<span class="fc bfc" id="L748" title="All 2 branches covered.">      if (strategy == null) {</span>
+<span class="fc" id="L749">        throw new IllegalStateException(&quot;A GroupingStrategy has to be set.&quot;);</span>
+      }
+
+      // adding the global aggregators to the associated label groups
+<span class="fc bfc" id="L753" title="All 2 branches covered.">      if (strategy != GroupingStrategy.GROUP_WITH_KEYFUNCTIONS) {</span>
+        // global aggregate functions can be handled separately for KeyedGrouping
+<span class="fc bfc" id="L755" title="All 2 branches covered.">        for (LabelGroup vertexLabelGroup : vertexLabelGroups) {</span>
+<span class="fc bfc" id="L756" title="All 2 branches covered.">          for (AggregateFunction aggregateFunction : globalVertexAggregateFunctions) {</span>
+<span class="fc" id="L757">            vertexLabelGroup.addAggregateFunction(aggregateFunction);</span>
+<span class="fc" id="L758">          }</span>
+<span class="fc" id="L759">        }</span>
+
+<span class="fc bfc" id="L761" title="All 2 branches covered.">        for (LabelGroup edgeLabelGroup : edgeLabelGroups) {</span>
+<span class="fc bfc" id="L762" title="All 2 branches covered.">          for (AggregateFunction aggregateFunction : globalEdgeAggregateFunctions) {</span>
+<span class="fc" id="L763">            edgeLabelGroup.addAggregateFunction(aggregateFunction);</span>
+<span class="fc" id="L764">          }</span>
+<span class="fc" id="L765">        }</span>
+      }
+
+      UnaryBaseGraphToBaseGraphOperator&lt;LG&gt; groupingOperator;
+
+<span class="pc bpc" id="L770" title="1 of 4 branches missed.">      switch (strategy) {</span>
+      case GROUP_REDUCE:
+<span class="fc" id="L772">        groupingOperator = new GroupingGroupReduce&lt;&gt;(</span>
+          useVertexLabel, useEdgeLabel, vertexLabelGroups, edgeLabelGroups,
+          retainVerticesWithoutGroup);
+<span class="fc" id="L775">        break;</span>
+      case GROUP_COMBINE:
+<span class="fc" id="L777">        groupingOperator = new GroupingGroupCombine&lt;&gt;(</span>
+          useVertexLabel, useEdgeLabel, vertexLabelGroups, edgeLabelGroups,
+          retainVerticesWithoutGroup);
+<span class="fc" id="L780">        break;</span>
+      case GROUP_WITH_KEYFUNCTIONS:
+<span class="pc bpc" id="L782" title="1 of 2 branches missed.">        if (retainVerticesWithoutGroup) {</span>
+<span class="nc" id="L783">          throw new UnsupportedOperationException(&quot;Retaining vertices without group is not yet supported&quot; +</span>
+            &quot; with this strategy.&quot;);
+        }
+<span class="fc" id="L786">        groupingOperator = KeyedGroupingUtils.createInstance(</span>
+          useVertexLabel, useEdgeLabel, vertexLabelGroups, edgeLabelGroups,
+          globalVertexAggregateFunctions, globalEdgeAggregateFunctions);
+<span class="fc" id="L789">        break;</span>
+      default:
+<span class="nc" id="L791">        throw new IllegalArgumentException(&quot;Unsupported strategy: &quot; + strategy);</span>
+      }
+
+<span class="fc" id="L794">      return groupingOperator;</span>
+    }
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

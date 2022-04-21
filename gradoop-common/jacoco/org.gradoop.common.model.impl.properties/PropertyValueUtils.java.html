@@ -1,0 +1,738 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PropertyValueUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Gradoop Common</a> &gt; <a href="index.source.html" class="el_package">org.gradoop.common.model.impl.properties</a> &gt; <span class="el_source">PropertyValueUtils.java</span></div><h1>PropertyValueUtils.java</h1><pre class="source lang-java linenums">/*
+ * Copyright © 2014 - 2021 Leipzig University (Database Research Group)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradoop.common.model.impl.properties;
+
+import org.gradoop.common.exceptions.UnsupportedTypeException;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.Arrays;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+
+/**
+ * Utilities for operations on multiple property values.
+ */
+<span class="nc" id="L30">public class PropertyValueUtils {</span>
+
+  /**
+   * Boolean utilities.
+   */
+<span class="nc" id="L35">  public static class Boolean {</span>
+
+    /**
+     * Logical or of two boolean properties.
+     *
+     * @param a first value
+     * @param b second value
+     * @return a OR b
+     */
+    public static PropertyValue or(PropertyValue a, PropertyValue b) {
+<span class="fc" id="L45">      checkNotNull(a, b);</span>
+<span class="fc" id="L46">      checkBoolean(a);</span>
+<span class="fc" id="L47">      checkBoolean(b);</span>
+
+<span class="fc bfc" id="L49" title="All 4 branches covered.">      a.setBoolean(a.getBoolean() || b.getBoolean());</span>
+
+<span class="fc" id="L51">      return a;</span>
+    }
+
+    /**
+     * Checks if a property value is boolean.
+     *
+     * @param value property value
+     */
+    private static void checkBoolean(PropertyValue value) {
+<span class="pc bpc" id="L60" title="1 of 2 branches missed.">      if (!value.isBoolean()) {</span>
+<span class="nc" id="L61">        throw new UnsupportedTypeException(value.getObject().getClass());</span>
+      }
+<span class="fc" id="L63">    }</span>
+  }
+
+  /**
+   * Numeric utilities.
+   */
+<span class="nc" id="L69">  public static class Numeric {</span>
+
+    /**
+     * Short type.
+     */
+    private static final int SHORT = 0;
+    /**
+     * Integer type.
+     */
+    private static final int INT = 1;
+    /**
+     * Long type.
+     */
+    private static final int LONG = 2;
+    /**
+     * Float type.
+     */
+    private static final int FLOAT = 3;
+    /**
+     * Double type.
+     */
+    private static final int DOUBLE = 4;
+    /**
+     * Big decimal type.
+     */
+    private static final int BIG_DECIMAL = 5;
+
+    /**
+     * Adds two numerical property values.
+     *
+     * @param aValue first value
+     * @param bValue second value
+     *
+     * @return first value + second value
+     */
+    public static PropertyValue add(
+      PropertyValue aValue, PropertyValue bValue) {
+
+<span class="fc" id="L107">      int aType = checkNumericalAndGetType(aValue);</span>
+<span class="fc" id="L108">      int bType = checkNumericalAndGetType(bValue);</span>
+
+<span class="fc bfc" id="L110" title="All 2 branches covered.">      boolean sameType = aType == bType;</span>
+
+<span class="fc" id="L112">      int returnType = maxType(aType, bType);</span>
+
+<span class="fc bfc" id="L114" title="All 2 branches covered.">      if (returnType == INT)  {</span>
+
+<span class="fc bfc" id="L116" title="All 2 branches covered.">        int a = aType == INT ? aValue.getInt() : aValue.getShort();</span>
+<span class="fc bfc" id="L117" title="All 2 branches covered.">        int b = bType == INT ? bValue.getInt() : bValue.getShort();</span>
+
+<span class="fc" id="L119">        aValue.setInt(a + b);</span>
+
+<span class="fc bfc" id="L121" title="All 2 branches covered.">      } else if (returnType == FLOAT)  {</span>
+
+        float a;
+        float b;
+
+<span class="fc bfc" id="L126" title="All 2 branches covered.">        if (sameType) {</span>
+<span class="fc" id="L127">          a = aValue.getFloat();</span>
+<span class="fc" id="L128">          b = bValue.getFloat();</span>
+        } else {
+<span class="fc bfc" id="L130" title="All 2 branches covered.">          a = aType == FLOAT ? aValue.getFloat() : floatValue(aValue, aType);</span>
+<span class="fc bfc" id="L131" title="All 2 branches covered.">          b = bType == FLOAT ? bValue.getFloat() : floatValue(bValue, bType);</span>
+        }
+
+<span class="fc" id="L134">        aValue.setFloat(a + b);</span>
+
+<span class="fc bfc" id="L136" title="All 2 branches covered.">      } else if (returnType == LONG)  {</span>
+
+        long a;
+        long b;
+
+<span class="fc bfc" id="L141" title="All 2 branches covered.">        if (sameType) {</span>
+<span class="fc" id="L142">          a = aValue.getLong();</span>
+<span class="fc" id="L143">          b = bValue.getLong();</span>
+        } else {
+<span class="fc bfc" id="L145" title="All 2 branches covered.">          a = aType == LONG ? aValue.getLong() : longValue(aValue, aType);</span>
+<span class="fc bfc" id="L146" title="All 2 branches covered.">          b = bType == LONG ? bValue.getLong() : longValue(bValue, bType);</span>
+        }
+
+<span class="fc" id="L149">        aValue.setLong(a + b);</span>
+
+<span class="fc bfc" id="L151" title="All 2 branches covered.">      } else if (returnType == DOUBLE)  {</span>
+
+        double a;
+        double b;
+
+<span class="fc bfc" id="L156" title="All 2 branches covered.">        if (sameType) {</span>
+<span class="fc" id="L157">          a = aValue.getDouble();</span>
+<span class="fc" id="L158">          b = bValue.getDouble();</span>
+        } else {
+<span class="fc bfc" id="L160" title="All 2 branches covered.">          a = aType == DOUBLE ? aValue.getDouble() : doubleValue(aValue, aType);</span>
+<span class="fc bfc" id="L161" title="All 2 branches covered.">          b = bType == DOUBLE ? bValue.getDouble() : doubleValue(bValue, bType);</span>
+        }
+
+<span class="fc" id="L164">        aValue.setDouble(a + b);</span>
+
+<span class="fc" id="L166">      } else {</span>
+
+        BigDecimal a;
+        BigDecimal b;
+
+<span class="fc bfc" id="L171" title="All 2 branches covered.">        if (sameType) {</span>
+<span class="fc" id="L172">          a = aValue.getBigDecimal();</span>
+<span class="fc" id="L173">          b = bValue.getBigDecimal();</span>
+        } else {
+<span class="fc bfc" id="L175" title="All 2 branches covered.">          a = aType == BIG_DECIMAL ?</span>
+<span class="fc" id="L176">            aValue.getBigDecimal() : bigDecimalValue(aValue, aType);</span>
+<span class="fc bfc" id="L177" title="All 2 branches covered.">          b = bType == BIG_DECIMAL ?</span>
+<span class="fc" id="L178">            bValue.getBigDecimal() : bigDecimalValue(bValue, bType);</span>
+        }
+
+<span class="fc" id="L181">        aValue.setBigDecimal(a.add(b));</span>
+      }
+
+<span class="fc" id="L184">      return aValue;</span>
+    }
+
+    /**
+     * Returns the maximum of two types, at least Integer.
+     *
+     * @param aType first type
+     * @param bType second type
+     *
+     * @return larger compatible type
+     */
+    private static int maxType(int aType, int bType) {
+<span class="fc" id="L196">      return Math.max(Math.max(aType, bType), INT);</span>
+    }
+
+    /**
+     * Multiplies two numerical property values.
+     *
+     * @param aValue first value
+     * @param bValue second value
+     *
+     * @return first value * second value
+     */
+    public static PropertyValue multiply(
+      PropertyValue aValue, PropertyValue bValue) {
+
+<span class="fc" id="L210">      int aType = checkNumericalAndGetType(aValue);</span>
+<span class="fc" id="L211">      int bType = checkNumericalAndGetType(bValue);</span>
+
+<span class="fc bfc" id="L213" title="All 2 branches covered.">      boolean sameType = aType == bType;</span>
+
+<span class="fc" id="L215">      int returnType = maxType(aType, bType);</span>
+
+<span class="fc bfc" id="L217" title="All 2 branches covered.">      if (returnType == INT)  {</span>
+
+<span class="fc bfc" id="L219" title="All 2 branches covered.">        int a = aType == INT ? aValue.getInt() : aValue.getShort();</span>
+<span class="fc bfc" id="L220" title="All 2 branches covered.">        int b = bType == INT ? bValue.getInt() : bValue.getShort();</span>
+
+<span class="fc" id="L222">        aValue.setInt(a * b);</span>
+
+<span class="fc bfc" id="L224" title="All 2 branches covered.">      } else if (returnType == FLOAT)  {</span>
+
+        float a;
+        float b;
+
+<span class="fc bfc" id="L229" title="All 2 branches covered.">        if (sameType) {</span>
+<span class="fc" id="L230">          a = aValue.getFloat();</span>
+<span class="fc" id="L231">          b = bValue.getFloat();</span>
+        } else {
+<span class="fc bfc" id="L233" title="All 2 branches covered.">          a = aType == FLOAT ? aValue.getFloat() : floatValue(aValue, aType);</span>
+<span class="fc bfc" id="L234" title="All 2 branches covered.">          b = bType == FLOAT ? bValue.getFloat() : floatValue(bValue, bType);</span>
+        }
+
+<span class="fc" id="L237">        aValue.setFloat(a * b);</span>
+
+<span class="fc bfc" id="L239" title="All 2 branches covered.">      } else if (returnType == LONG)  {</span>
+
+        long a;
+        long b;
+
+<span class="fc bfc" id="L244" title="All 2 branches covered.">        if (sameType) {</span>
+<span class="fc" id="L245">          a = aValue.getLong();</span>
+<span class="fc" id="L246">          b = bValue.getLong();</span>
+        } else {
+<span class="fc bfc" id="L248" title="All 2 branches covered.">          a = aType == LONG ? aValue.getLong() : longValue(aValue, aType);</span>
+<span class="fc bfc" id="L249" title="All 2 branches covered.">          b = bType == LONG ? bValue.getLong() : longValue(bValue, bType);</span>
+        }
+
+<span class="fc" id="L252">        aValue.setLong(a * b);</span>
+
+<span class="fc bfc" id="L254" title="All 2 branches covered.">      } else if (returnType == DOUBLE)  {</span>
+
+        double a;
+        double b;
+
+<span class="fc bfc" id="L259" title="All 2 branches covered.">        if (sameType) {</span>
+<span class="fc" id="L260">          a = aValue.getDouble();</span>
+<span class="fc" id="L261">          b = bValue.getDouble();</span>
+        } else {
+<span class="fc bfc" id="L263" title="All 2 branches covered.">          a = aType == DOUBLE ? aValue.getDouble() : doubleValue(aValue, aType);</span>
+<span class="fc bfc" id="L264" title="All 2 branches covered.">          b = bType == DOUBLE ? bValue.getDouble() : doubleValue(bValue, bType);</span>
+        }
+
+<span class="fc" id="L267">        aValue.setDouble(a * b);</span>
+
+<span class="fc" id="L269">      } else {</span>
+
+        BigDecimal a;
+        BigDecimal b;
+
+<span class="fc bfc" id="L274" title="All 2 branches covered.">        if (sameType) {</span>
+<span class="fc" id="L275">          a = aValue.getBigDecimal();</span>
+<span class="fc" id="L276">          b = bValue.getBigDecimal();</span>
+        } else {
+<span class="fc bfc" id="L278" title="All 2 branches covered.">          a = aType == BIG_DECIMAL ?</span>
+<span class="fc" id="L279">            aValue.getBigDecimal() : bigDecimalValue(aValue, aType);</span>
+<span class="fc bfc" id="L280" title="All 2 branches covered.">          b = bType == BIG_DECIMAL ?</span>
+<span class="fc" id="L281">            bValue.getBigDecimal() : bigDecimalValue(bValue, bType);</span>
+        }
+
+<span class="fc" id="L284">        aValue.setBigDecimal(a.multiply(b));</span>
+      }
+
+<span class="fc" id="L287">      return aValue;</span>
+    }
+
+    /**
+     * Compares two numerical property values
+     *
+     * @param aValue first value
+     * @param bValue second value
+     *
+     * @return 0 if a equal to b, {@code &lt; 0} if {@code a &lt; b} and {@code &gt; 0} if {@code a &gt; b}
+     */
+    public static int compare(PropertyValue aValue, PropertyValue bValue) {
+
+<span class="nc" id="L300">      int aType = checkNumericalAndGetType(aValue);</span>
+<span class="nc" id="L301">      int bType = checkNumericalAndGetType(bValue);</span>
+
+<span class="nc bnc" id="L303" title="All 2 branches missed.">      boolean sameType = aType == bType;</span>
+
+<span class="nc" id="L305">      int maxType = Math.max(aType, bType);</span>
+
+      int result;
+
+<span class="nc bnc" id="L309" title="All 2 branches missed.">      if (maxType == SHORT) {</span>
+<span class="nc" id="L310">        result = Short.compare(aValue.getShort(), bValue.getShort());</span>
+
+<span class="nc bnc" id="L312" title="All 2 branches missed.">      } else if (maxType == INT)  {</span>
+        int a;
+        int b;
+
+<span class="nc bnc" id="L316" title="All 2 branches missed.">        if (sameType) {</span>
+<span class="nc" id="L317">          a = aValue.getInt();</span>
+<span class="nc" id="L318">          b = bValue.getInt();</span>
+        } else {
+<span class="nc bnc" id="L320" title="All 2 branches missed.">          a = aType == INT ? aValue.getInt() : aValue.getShort();</span>
+<span class="nc bnc" id="L321" title="All 2 branches missed.">          b = bType == INT ? bValue.getInt() : bValue.getShort();</span>
+        }
+
+<span class="nc" id="L324">        result = Integer.compare(a, b);</span>
+
+<span class="nc bnc" id="L326" title="All 2 branches missed.">      } else if (maxType == FLOAT) {</span>
+        float a;
+        float b;
+
+<span class="nc bnc" id="L330" title="All 2 branches missed.">        if (sameType) {</span>
+<span class="nc" id="L331">          a = aValue.getFloat();</span>
+<span class="nc" id="L332">          b = bValue.getFloat();</span>
+        } else {
+<span class="nc bnc" id="L334" title="All 2 branches missed.">          a = aType == FLOAT ? aValue.getFloat() : floatValue(aValue, aType);</span>
+<span class="nc bnc" id="L335" title="All 2 branches missed.">          b = bType == FLOAT ? bValue.getFloat() : floatValue(bValue, bType);</span>
+        }
+
+<span class="nc" id="L338">        result = Float.compare(a, b);</span>
+
+<span class="nc bnc" id="L340" title="All 2 branches missed.">      } else if (maxType == LONG) {</span>
+        long a;
+        long b;
+
+<span class="nc bnc" id="L344" title="All 2 branches missed.">        if (sameType) {</span>
+<span class="nc" id="L345">          a = aValue.getLong();</span>
+<span class="nc" id="L346">          b = bValue.getLong();</span>
+        } else {
+<span class="nc bnc" id="L348" title="All 2 branches missed.">          a = aType == LONG ? aValue.getLong() : longValue(aValue, aType);</span>
+<span class="nc bnc" id="L349" title="All 2 branches missed.">          b = bType == LONG ? bValue.getLong() : longValue(bValue, bType);</span>
+        }
+
+<span class="nc" id="L352">        result = Long.compare(a, b);</span>
+
+<span class="nc bnc" id="L354" title="All 2 branches missed.">      } else if (maxType == DOUBLE) {</span>
+        double a;
+        double b;
+
+<span class="nc bnc" id="L358" title="All 2 branches missed.">        if (sameType) {</span>
+<span class="nc" id="L359">          a = aValue.getDouble();</span>
+<span class="nc" id="L360">          b = bValue.getDouble();</span>
+        } else {
+<span class="nc bnc" id="L362" title="All 2 branches missed.">          a = aType == DOUBLE ? aValue.getDouble() : doubleValue(aValue, aType);</span>
+<span class="nc bnc" id="L363" title="All 2 branches missed.">          b = bType == DOUBLE ? bValue.getDouble() : doubleValue(bValue, bType);</span>
+        }
+
+<span class="nc" id="L366">        result = Double.compare(a, b);</span>
+
+<span class="nc" id="L368">      } else {</span>
+        BigDecimal a;
+        BigDecimal b;
+
+<span class="nc bnc" id="L372" title="All 2 branches missed.">        if (sameType) {</span>
+<span class="nc" id="L373">          a = aValue.getBigDecimal();</span>
+<span class="nc" id="L374">          b = bValue.getBigDecimal();</span>
+        } else {
+<span class="nc bnc" id="L376" title="All 2 branches missed.">          a = aType == BIG_DECIMAL ? aValue.getBigDecimal() :</span>
+<span class="nc" id="L377">                  bigDecimalValue(aValue, aType);</span>
+<span class="nc bnc" id="L378" title="All 2 branches missed.">          b = bType == BIG_DECIMAL ? bValue.getBigDecimal() :</span>
+<span class="nc" id="L379">                  bigDecimalValue(bValue, bType);</span>
+        }
+
+<span class="nc" id="L382">        result = a.compareTo(b);</span>
+      }
+
+<span class="nc" id="L385">      return result;</span>
+    }
+
+    /**
+     * Compares two numerical property values and returns the smaller one.
+     *
+     * @param a first value
+     * @param b second value
+     *
+     * @return smaller value
+     */
+    public static PropertyValue min(PropertyValue a, PropertyValue b) {
+<span class="fc bfc" id="L397" title="All 2 branches covered.">      return isLessOrEqualThan(a, b) ? a : b;</span>
+    }
+
+    /**
+     * Compares two numerical property values and returns the bigger one.
+     *
+     * @param a first value
+     * @param b second value
+     *
+     * @return bigger value
+     */
+    public static PropertyValue max(PropertyValue a, PropertyValue b) {
+<span class="fc bfc" id="L409" title="All 2 branches covered.">      return isLessOrEqualThan(a, b) ? b : a;</span>
+    }
+
+    /**
+     * Compares two numerical property values and returns true,
+     * if the first one is smaller.
+     *
+     * @param aValue first value
+     * @param bValue second value
+     *
+     * @return a &lt; b
+     */
+    private static boolean isLessOrEqualThan(PropertyValue aValue, PropertyValue bValue) {
+
+<span class="fc" id="L423">      int aType = checkNumericalAndGetType(aValue);</span>
+<span class="fc" id="L424">      int bType = checkNumericalAndGetType(bValue);</span>
+
+<span class="fc bfc" id="L426" title="All 2 branches covered.">      boolean sameType = aType == bType;</span>
+
+<span class="fc" id="L428">      int returnType = maxType(aType, bType);</span>
+
+      boolean aIsLessOrEqual;
+
+<span class="fc bfc" id="L432" title="All 2 branches covered.">      if (returnType == INT)  {</span>
+
+<span class="fc bfc" id="L434" title="All 2 branches covered.">        int a = aType == INT ? aValue.getInt() : aValue.getShort();</span>
+<span class="fc bfc" id="L435" title="All 2 branches covered.">        int b = bType == INT ? bValue.getInt() : bValue.getShort();</span>
+
+<span class="fc bfc" id="L437" title="All 2 branches covered.">        aIsLessOrEqual = a &lt;= b;</span>
+
+<span class="fc bfc" id="L439" title="All 2 branches covered.">      } else if (returnType == FLOAT) {</span>
+
+        float a;
+        float b;
+
+<span class="fc bfc" id="L444" title="All 2 branches covered.">        if (sameType) {</span>
+<span class="fc" id="L445">          a = aValue.getFloat();</span>
+<span class="fc" id="L446">          b = bValue.getFloat();</span>
+        } else {
+<span class="fc bfc" id="L448" title="All 2 branches covered.">          a = aType == FLOAT ? aValue.getFloat() : floatValue(aValue, aType);</span>
+<span class="fc bfc" id="L449" title="All 2 branches covered.">          b = bType == FLOAT ? bValue.getFloat() : floatValue(bValue, bType);</span>
+        }
+
+<span class="fc bfc" id="L452" title="All 2 branches covered.">        aIsLessOrEqual = a &lt;= b;</span>
+
+<span class="fc bfc" id="L454" title="All 2 branches covered.">      } else if (returnType == LONG) {</span>
+
+        long a;
+        long b;
+
+<span class="fc bfc" id="L459" title="All 2 branches covered.">        if (sameType) {</span>
+<span class="fc" id="L460">          a = aValue.getLong();</span>
+<span class="fc" id="L461">          b = bValue.getLong();</span>
+        } else {
+<span class="fc bfc" id="L463" title="All 2 branches covered.">          a = aType == LONG ? aValue.getLong() : longValue(aValue, aType);</span>
+<span class="fc bfc" id="L464" title="All 2 branches covered.">          b = bType == LONG ? bValue.getLong() : longValue(bValue, bType);</span>
+        }
+
+<span class="fc bfc" id="L467" title="All 2 branches covered.">        aIsLessOrEqual = a &lt;= b;</span>
+
+<span class="fc bfc" id="L469" title="All 2 branches covered.">      } else if (returnType == DOUBLE) {</span>
+
+        double a;
+        double b;
+
+<span class="fc bfc" id="L474" title="All 2 branches covered.">        if (sameType) {</span>
+<span class="fc" id="L475">          a = aValue.getDouble();</span>
+<span class="fc" id="L476">          b = bValue.getDouble();</span>
+        } else {
+<span class="fc bfc" id="L478" title="All 2 branches covered.">          a = aType == DOUBLE ? aValue.getDouble() : doubleValue(aValue, aType);</span>
+<span class="fc bfc" id="L479" title="All 2 branches covered.">          b = bType == DOUBLE ? bValue.getDouble() : doubleValue(bValue, bType);</span>
+        }
+
+<span class="fc bfc" id="L482" title="All 2 branches covered.">        aIsLessOrEqual = a &lt;= b;</span>
+
+<span class="fc" id="L484">      } else {</span>
+
+        BigDecimal a;
+        BigDecimal b;
+
+<span class="fc bfc" id="L489" title="All 2 branches covered.">        if (sameType) {</span>
+<span class="fc" id="L490">          a = aValue.getBigDecimal();</span>
+<span class="fc" id="L491">          b = bValue.getBigDecimal();</span>
+        } else {
+<span class="fc bfc" id="L493" title="All 2 branches covered.">          a = aType == BIG_DECIMAL ? aValue.getBigDecimal() :</span>
+<span class="fc" id="L494">            bigDecimalValue(aValue, aType);</span>
+<span class="fc bfc" id="L495" title="All 2 branches covered.">          b = bType == BIG_DECIMAL ? bValue.getBigDecimal() :</span>
+<span class="fc" id="L496">            bigDecimalValue(bValue, bType);</span>
+        }
+
+<span class="fc bfc" id="L499" title="All 2 branches covered.">        aIsLessOrEqual = a.compareTo(b) &lt;= 0;</span>
+      }
+
+<span class="fc" id="L502">      return aIsLessOrEqual;</span>
+    }
+
+    /**
+     * Checks a property value for numerical type and returns its type.
+     *
+     * @param value property value
+     *
+     * @return numerical type
+     */
+    private static int checkNumericalAndGetType(PropertyValue value) {
+<span class="fc" id="L513">      checkNotNull(value);</span>
+
+      int type;
+
+<span class="fc bfc" id="L517" title="All 2 branches covered.">      if (value.isShort()) {</span>
+<span class="fc" id="L518">        type = SHORT;</span>
+<span class="fc bfc" id="L519" title="All 2 branches covered.">      } else if (value.isInt()) {</span>
+<span class="fc" id="L520">        type = INT;</span>
+<span class="fc bfc" id="L521" title="All 2 branches covered.">      } else if (value.isLong()) {</span>
+<span class="fc" id="L522">        type = LONG;</span>
+<span class="fc bfc" id="L523" title="All 2 branches covered.">      } else if (value.isFloat()) {</span>
+<span class="fc" id="L524">        type = FLOAT;</span>
+<span class="fc bfc" id="L525" title="All 2 branches covered.">      } else if (value.isDouble()) {</span>
+<span class="fc" id="L526">        type = DOUBLE;</span>
+<span class="pc bpc" id="L527" title="1 of 2 branches missed.">      } else if (value.isBigDecimal()) {</span>
+<span class="fc" id="L528">        type = BIG_DECIMAL;</span>
+      } else {
+<span class="nc" id="L530">        throw new UnsupportedTypeException(value.getObject().getClass());</span>
+      }
+
+<span class="fc" id="L533">      return type;</span>
+    }
+
+    /**
+     * Converts a value of a lower domain numerical type to BigDecimal.
+     *
+     * @param value value
+     * @param type type
+     *
+     * @return converted value
+     */
+    private static BigDecimal bigDecimalValue(PropertyValue value, int type) {
+<span class="fc bfc" id="L545" title="All 5 branches covered.">      switch (type) {</span>
+      case SHORT:
+<span class="fc" id="L547">        return BigDecimal.valueOf(value.getShort());</span>
+      case INT:
+<span class="fc" id="L549">        return BigDecimal.valueOf(value.getInt());</span>
+      case LONG:
+<span class="fc" id="L551">        return BigDecimal.valueOf(value.getLong());</span>
+      case FLOAT:
+<span class="fc" id="L553">        return BigDecimal.valueOf(value.getFloat());</span>
+      default:
+<span class="fc" id="L555">        return BigDecimal.valueOf(value.getDouble());</span>
+      }
+    }
+
+    /**
+     * Converts a value of a lower domain numerical type to Double.
+     *
+     * @param value value
+     * @param type type
+     *
+     * @return converted value
+     */
+    private static double doubleValue(PropertyValue value, int type) {
+<span class="fc bfc" id="L568" title="All 4 branches covered.">      switch (type) {</span>
+      case SHORT:
+<span class="fc" id="L570">        return value.getShort();</span>
+      case INT:
+<span class="fc" id="L572">        return value.getInt();</span>
+      case LONG:
+<span class="fc" id="L574">        return value.getLong();</span>
+      default:
+<span class="fc" id="L576">        return value.getFloat();</span>
+      }
+    }
+
+    /**
+     * Converts a value of a lower domain numerical type to Long.
+     *
+     * @param value value
+     * @param type type
+     *
+     * @return converted value
+     */
+    private static long longValue(PropertyValue value, int type) {
+<span class="fc bfc" id="L589" title="All 2 branches covered.">      switch (type) {</span>
+      case SHORT:
+<span class="fc" id="L591">        return value.getShort();</span>
+      default:
+<span class="fc" id="L593">        return value.getInt();</span>
+      }
+    }
+
+    /**
+     * Converts a value of a lower domain numerical type to Float.
+     *
+     * @param value value
+     * @param type type
+     *
+     * @return converted value
+     */
+    private static float floatValue(PropertyValue value, int type) {
+<span class="fc bfc" id="L606" title="All 3 branches covered.">      switch (type) {</span>
+      case SHORT:
+<span class="fc" id="L608">        return value.getShort();</span>
+      case INT:
+<span class="fc" id="L610">        return value.getInt();</span>
+      default:
+<span class="fc" id="L612">        return value.getLong();</span>
+      }
+    }
+  }
+
+  /**
+   * Date and DateTime utilities.
+   */
+<span class="nc" id="L620">  public static class Date {</span>
+
+    /**
+     * Compares two time property values and returns the chronological first one.
+     * &lt;p&gt;
+     * Note that the comparison of a {@link java.time.LocalDate} with a {@link LocalDateTime}
+     * will cause casting the {@link java.time.LocalDate} to a {@link java.time.LocalDateTime}
+     * instance, but just for the comparison. The return value is not casted.
+     *
+     * @param a first value
+     * @param b second value
+     *
+     * @return the time property value that is the chronological first
+     */
+    public static PropertyValue min(PropertyValue a, PropertyValue b) {
+<span class="fc bfc" id="L635" title="All 2 branches covered.">      return compare(a, b) &lt;= 0 ? a : b;</span>
+    }
+
+    /**
+     * Compares two time property values and returns the chronological last one.
+     * &lt;p&gt;
+     * Note that the comparison of a {@link java.time.LocalDate} with a {@link LocalDateTime}
+     * will cause casting the {@link java.time.LocalDate} to a {@link java.time.LocalDateTime}
+     * instance, but just for the comparison. The return value is not casted.
+     *
+     * @param a first value
+     * @param b second value
+     *
+     * @return the time property value that is the chronological last
+     */
+    public static PropertyValue max(PropertyValue a, PropertyValue b) {
+<span class="fc bfc" id="L651" title="All 2 branches covered.">      return compare(a, b) &lt;= 0 ? b : a;</span>
+    }
+
+    /**
+     * Compares two date or datetime property values and returns {@code -1}, if the first one is earlier,
+     * {@code 0} equal or {@code 1} later than the second one.
+     * Note that the comparison of a {@link java.time.LocalDate} with a {@link LocalDateTime}
+     * will cause casting the {@link java.time.LocalDate} to a {@link java.time.LocalDateTime} instance.
+     *
+     * @param aValue first value
+     * @param bValue second value
+     *
+     * @return returns {@code -1}, if the first one is earlier, {@code 0} equal or {@code 1} later than the
+     *         second one
+     * @throws IllegalArgumentException if arguments are not of type Date or DateTime
+     */
+    private static int compare(PropertyValue aValue, PropertyValue bValue) {
+<span class="fc bfc" id="L668" title="All 4 branches covered.">      if (aValue.isDateTime() &amp;&amp; bValue.isDateTime()) {</span>
+<span class="fc" id="L669">        return aValue.getDateTime().compareTo(bValue.getDateTime());</span>
+<span class="fc bfc" id="L670" title="All 4 branches covered.">      } else if (aValue.isDate() &amp;&amp; bValue.isDate()) {</span>
+<span class="fc" id="L671">        return aValue.getDate().compareTo(bValue.getDate());</span>
+<span class="fc bfc" id="L672" title="All 4 branches covered.">      } else if (aValue.isDate() &amp;&amp; bValue.isDateTime()) {</span>
+        // cast a to DateTime
+<span class="fc" id="L674">        return LocalDateTime.of(aValue.getDate(), LocalTime.MIN).compareTo(bValue.getDateTime());</span>
+<span class="pc bpc" id="L675" title="1 of 4 branches missed.">      } else if (aValue.isDateTime() &amp;&amp; bValue.isDate()) {</span>
+        // cast b to DateTime
+<span class="fc" id="L677">        return aValue.getDateTime().compareTo(LocalDateTime.of(bValue.getDate(), LocalTime.MIN));</span>
+      } else {
+<span class="fc" id="L679">        throw new IllegalArgumentException(&quot;Arguments to compare are not of type Date or DateTime.&quot;);</span>
+      }
+    }
+
+    /**
+     * Checks the property value type for Date or DateTime.
+     *
+     * @param value the property value to check
+     * @return true, iff the value is a Date or DateTime type
+     */
+    public static boolean isDateOrDateTime(PropertyValue value) {
+<span class="fc bfc" id="L690" title="All 4 branches covered.">      return value.isDate() || value.isDateTime();</span>
+    }
+  }
+
+  /**
+   * Byte utilities.
+   */
+<span class="nc" id="L697">  public static class BytesUtils {</span>
+
+    /**
+     * Get the raw byte representation of a {@link PropertyValue} instance without the type byte as prefix.
+     *
+     * @param value the {@link PropertyValue} to extract the bytes
+     * @return a byte array containing the value without type information
+     */
+    public static byte[] getRawBytesWithoutType(PropertyValue value) {
+<span class="fc" id="L706">      return Arrays.copyOfRange(value.getRawBytes(), 1, value.getRawBytes().length);</span>
+    }
+
+    /**
+     * Get the type byte of a {@link PropertyValue} instance. It's the first one of the
+     * raw representation of a PropertyValue.
+     *
+     * @param value the {@link PropertyValue} to extract the type byte
+     * @return the type byte as array
+     */
+    public static byte[] getTypeByte(PropertyValue value) {
+<span class="fc" id="L717">      byte[] typeByte = new byte[1];</span>
+<span class="fc" id="L718">      typeByte[0] = value.getRawBytes()[0];</span>
+<span class="fc" id="L719">      return typeByte;</span>
+    }
+
+    /**
+     * Creates a {@link PropertyValue} instance by concatenating the byte representations
+     * of the type and the value.
+     *
+     * @param typeByte a byte array containing only one byte representing the value type
+     * @param valueBytes a byte array representing the property value
+     * @return the resulting {@link PropertyValue}
+     */
+    public static PropertyValue createFromTypeValueBytes(byte[] typeByte, byte[] valueBytes) {
+<span class="fc" id="L731">      byte[] validValue = new byte[valueBytes.length + 1];</span>
+<span class="fc" id="L732">      validValue[0] = typeByte[0];</span>
+<span class="fc" id="L733">      System.arraycopy(valueBytes, 0, validValue, 1, valueBytes.length);</span>
+<span class="fc" id="L734">      return PropertyValue.fromRawBytes(validValue);</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

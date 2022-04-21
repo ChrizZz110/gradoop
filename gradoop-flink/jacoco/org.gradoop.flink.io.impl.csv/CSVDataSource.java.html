@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CSVDataSource.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Gradoop Flink</a> &gt; <a href="index.source.html" class="el_package">org.gradoop.flink.io.impl.csv</a> &gt; <span class="el_source">CSVDataSource.java</span></div><h1>CSVDataSource.java</h1><pre class="source lang-java linenums">/*
+ * Copyright © 2014 - 2021 Leipzig University (Database Research Group)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradoop.flink.io.impl.csv;
+
+import org.apache.flink.api.java.DataSet;
+import org.apache.flink.api.java.tuple.Tuple3;
+import org.gradoop.common.model.api.entities.Edge;
+import org.gradoop.common.model.api.entities.GraphHead;
+import org.gradoop.common.model.api.entities.Vertex;
+import org.gradoop.flink.io.api.DataSource;
+import org.gradoop.flink.io.impl.csv.functions.CSVLineToEdge;
+import org.gradoop.flink.io.impl.csv.functions.CSVLineToElement;
+import org.gradoop.flink.io.impl.csv.functions.CSVLineToGraphHead;
+import org.gradoop.flink.io.impl.csv.functions.CSVLineToVertex;
+import org.gradoop.flink.io.impl.csv.metadata.CSVMetaDataSource;
+import org.gradoop.flink.model.api.epgm.BaseGraph;
+import org.gradoop.flink.model.api.epgm.BaseGraphCollection;
+import org.gradoop.flink.model.api.epgm.BaseGraphCollectionFactory;
+import org.gradoop.flink.model.impl.epgm.GraphCollection;
+import org.gradoop.flink.model.impl.epgm.GraphCollectionFactory;
+import org.gradoop.flink.model.impl.epgm.LogicalGraph;
+import org.gradoop.flink.util.GradoopFlinkConfig;
+
+/**
+ * A graph data source for CSV files.
+ * &lt;p&gt;
+ * The datasource expects files separated by vertices and edges, e.g. in the following directory
+ * structure:
+ * &lt;p&gt;
+ * csvRoot
+ * |- vertices.csv # all vertex data
+ * |- edges.csv    # all edge data
+ * |- graphs.csv   # all graph head data
+ * |- metadata.csv # Meta data for all data contained in the graph
+ */
+public class CSVDataSource extends CSVBase implements DataSource {
+
+  /**
+   * Creates a new CSV data source.
+   *
+   * @param csvPath path to the directory containing the CSV files
+   * @param config  Gradoop Flink configuration
+   */
+  public CSVDataSource(String csvPath, GradoopFlinkConfig config) {
+<span class="fc" id="L58">    super(csvPath, config);</span>
+<span class="fc" id="L59">  }</span>
+
+  /**
+   * Will use a single graph head of the collection as final graph head for the graph.
+   * Issue #1217 (https://github.com/dbs-leipzig/gradoop/issues/1217) will optimize further.
+   *
+   * {@inheritDoc}
+   */
+  @Override
+  public LogicalGraph getLogicalGraph() {
+<span class="fc" id="L69">    GraphCollection collection = getGraphCollection();</span>
+<span class="fc" id="L70">    return collection.getGraphFactory()</span>
+<span class="fc" id="L71">      .fromDataSets(</span>
+<span class="fc" id="L72">        collection.getGraphHeads().first(1), collection.getVertices(), collection.getEdges());</span>
+  }
+
+  @Override
+  public GraphCollection getGraphCollection() {
+<span class="fc" id="L77">    GraphCollectionFactory collectionFactory = getConfig().getGraphCollectionFactory();</span>
+<span class="fc" id="L78">    return getCollection(</span>
+<span class="fc" id="L79">      new CSVLineToGraphHead(collectionFactory.getGraphHeadFactory()),</span>
+<span class="fc" id="L80">      new CSVLineToVertex(collectionFactory.getVertexFactory()),</span>
+<span class="fc" id="L81">      new CSVLineToEdge(collectionFactory.getEdgeFactory()),</span>
+      collectionFactory);
+  }
+
+  /**
+   * Create a graph collection from CSV lines using {@link CSVLineToElement} mapper functions.
+   *
+   * @param csvToGraphHead    A function mapping a CSV line to a graph head.
+   * @param csvToVertex       A function mapping a CSV line to a vertex.
+   * @param csvToEdge         A function mapping a CSV line to an edge.
+   * @param collectionFactory A factory used to create the final graph collection.
+   * @param &lt;G&gt;  The graph head type.
+   * @param &lt;V&gt;  The vertex type.
+   * @param &lt;E&gt;  The edge type.
+   * @param &lt;LG&gt; The graph type.
+   * @param &lt;GC&gt; The graph collection type.
+   * @return A graph collection representing the graph data stored as CSV.
+   */
+  protected &lt;
+    G extends GraphHead,
+    V extends Vertex,
+    E extends Edge,
+    LG extends BaseGraph&lt;G, V, E, LG, GC&gt;,
+    GC extends BaseGraphCollection&lt;G, V, E, LG, GC&gt;&gt; GC getCollection(
+      CSVLineToElement&lt;G&gt; csvToGraphHead,
+      CSVLineToElement&lt;V&gt; csvToVertex,
+      CSVLineToElement&lt;E&gt; csvToEdge,
+      BaseGraphCollectionFactory&lt;G, V, E, LG, GC&gt; collectionFactory) {
+
+    // Read the meta data
+<span class="fc" id="L111">    DataSet&lt;Tuple3&lt;String, String, String&gt;&gt; metaData =</span>
+<span class="fc" id="L112">      new CSVMetaDataSource().readDistributed(getMetaDataPath(), getConfig());</span>
+
+    // Read the datasets of each graph element
+<span class="fc" id="L115">    DataSet&lt;G&gt; graphHeads = getConfig().getExecutionEnvironment()</span>
+<span class="fc" id="L116">      .readTextFile(getGraphHeadCSVPath())</span>
+<span class="fc" id="L117">      .map(csvToGraphHead).withBroadcastSet(metaData, BC_METADATA);</span>
+
+<span class="fc" id="L119">    DataSet&lt;V&gt; vertices = getConfig().getExecutionEnvironment()</span>
+<span class="fc" id="L120">      .readTextFile(getVertexCSVPath())</span>
+<span class="fc" id="L121">      .map(csvToVertex).withBroadcastSet(metaData, BC_METADATA);</span>
+
+<span class="fc" id="L123">    DataSet&lt;E&gt; edges = getConfig().getExecutionEnvironment()</span>
+<span class="fc" id="L124">      .readTextFile(getEdgeCSVPath())</span>
+<span class="fc" id="L125">      .map(csvToEdge).withBroadcastSet(metaData, BC_METADATA);</span>
+
+    // Create the graph
+<span class="fc" id="L128">    return collectionFactory.fromDataSets(graphHeads, vertices, edges);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

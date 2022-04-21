@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SetAggregateProperties.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Gradoop Flink</a> &gt; <a href="index.source.html" class="el_package">org.gradoop.flink.model.impl.operators.aggregation.functions</a> &gt; <span class="el_source">SetAggregateProperties.java</span></div><h1>SetAggregateProperties.java</h1><pre class="source lang-java linenums">/*
+ * Copyright © 2014 - 2021 Leipzig University (Database Research Group)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradoop.flink.model.impl.operators.aggregation.functions;
+
+import org.apache.flink.api.common.functions.CoGroupFunction;
+import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.util.Collector;
+import org.gradoop.common.model.api.entities.GraphHead;
+import org.gradoop.common.model.impl.id.GradoopId;
+import org.gradoop.common.model.impl.properties.PropertyValue;
+import org.gradoop.flink.model.api.functions.AggregateFunction;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+
+/**
+ * Sets aggregate values of graph heads.
+ *
+ * @param &lt;G&gt; type of the graph head
+ */
+public class SetAggregateProperties&lt;G extends GraphHead&gt;
+  implements CoGroupFunction&lt;G, Tuple2&lt;GradoopId, Map&lt;String, PropertyValue&gt;&gt;, G&gt; {
+
+  /**
+   * default values used to replace aggregate values in case of NULL.
+   */
+  private final Map&lt;String, PropertyValue&gt; defaultValues;
+
+  /**
+   * Aggregate functions from the aggregation step.
+   */
+  private final Set&lt;AggregateFunction&gt; aggregateFunctions;
+
+  /**
+   * Creates a new instance of a SetAggregateProperties coGroup function.
+   *
+   * @param aggregateFunctions aggregate functions
+   */
+<span class="fc" id="L54">  public SetAggregateProperties(final Set&lt;AggregateFunction&gt; aggregateFunctions) {</span>
+
+<span class="fc" id="L56">    defaultValues = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L57">    this.aggregateFunctions = Objects.requireNonNull(aggregateFunctions);</span>
+
+<span class="fc bfc" id="L59" title="All 2 branches covered.">    for (AggregateFunction func : aggregateFunctions) {</span>
+<span class="fc" id="L60">      Objects.requireNonNull(func);</span>
+<span class="fc" id="L61">      defaultValues.put(func.getAggregatePropertyKey(), AggregateUtil.getDefaultAggregate(func));</span>
+<span class="fc" id="L62">    }</span>
+<span class="fc" id="L63">  }</span>
+
+  @Override
+  public void coGroup(Iterable&lt;G&gt; left, Iterable&lt;Tuple2&lt;GradoopId, Map&lt;String, PropertyValue&gt;&gt;&gt; right,
+                      Collector&lt;G&gt; out) {
+
+<span class="fc bfc" id="L69" title="All 2 branches covered.">    for (G leftElem : left) {</span>
+<span class="fc" id="L70">      boolean rightEmpty = true;</span>
+<span class="fc bfc" id="L71" title="All 2 branches covered.">      for (Tuple2&lt;GradoopId, Map&lt;String, PropertyValue&gt;&gt; rightElem : right) {</span>
+<span class="fc" id="L72">        Map&lt;String, PropertyValue&gt; values = rightElem.f1;</span>
+        // Apply post-aggregation step.
+<span class="fc bfc" id="L74" title="All 2 branches covered.">        for (AggregateFunction function : aggregateFunctions) {</span>
+<span class="fc" id="L75">          values.computeIfPresent(function.getAggregatePropertyKey(),</span>
+<span class="fc" id="L76">            (k, v) -&gt; function.postAggregate(v));</span>
+<span class="fc" id="L77">        }</span>
+<span class="fc" id="L78">        values.forEach(leftElem::setProperty);</span>
+<span class="fc" id="L79">        out.collect(leftElem);</span>
+<span class="fc" id="L80">        rightEmpty = false;</span>
+<span class="fc" id="L81">      }</span>
+<span class="fc bfc" id="L82" title="All 2 branches covered.">      if (rightEmpty) {</span>
+<span class="fc" id="L83">        defaultValues.forEach(leftElem::setProperty);</span>
+<span class="fc" id="L84">        out.collect(leftElem);</span>
+      }
+<span class="fc" id="L86">    }</span>
+<span class="fc" id="L87">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

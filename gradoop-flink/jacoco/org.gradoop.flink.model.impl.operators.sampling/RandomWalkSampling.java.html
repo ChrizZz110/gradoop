@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RandomWalkSampling.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Gradoop Flink</a> &gt; <a href="index.source.html" class="el_package">org.gradoop.flink.model.impl.operators.sampling</a> &gt; <span class="el_source">RandomWalkSampling.java</span></div><h1>RandomWalkSampling.java</h1><pre class="source lang-java linenums">/*
+ * Copyright © 2014 - 2021 Leipzig University (Database Research Group)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradoop.flink.model.impl.operators.sampling;
+
+import org.apache.flink.api.java.DataSet;
+import org.gradoop.common.model.api.entities.Edge;
+import org.gradoop.common.model.api.entities.GraphHead;
+import org.gradoop.common.model.api.entities.Vertex;
+import org.gradoop.flink.algorithms.gelly.randomjump.KRandomJumpGellyVCI;
+import org.gradoop.flink.model.api.epgm.BaseGraph;
+import org.gradoop.flink.model.api.epgm.BaseGraphCollection;
+import org.gradoop.flink.model.impl.functions.epgm.ByProperty;
+import org.gradoop.flink.model.impl.functions.epgm.Id;
+import org.gradoop.flink.model.impl.functions.epgm.SourceId;
+import org.gradoop.flink.model.impl.functions.tuple.Value0Of3;
+import org.gradoop.flink.model.impl.operators.sampling.common.SamplingConstants;
+import org.gradoop.flink.model.impl.operators.sampling.functions.EdgeSourceVertexJoin;
+import org.gradoop.flink.model.impl.operators.sampling.functions.EdgeTargetVertexJoin;
+import org.gradoop.flink.model.impl.operators.sampling.functions.EdgesWithSampledVerticesFilter;
+import org.gradoop.flink.model.impl.operators.sampling.functions.Neighborhood;
+
+/**
+ * Computes a random walk sampling of the graph (new graph head will be generated). Retains visited
+ * vertices and edges where source and target vertex has been sampled.
+ *
+ * @param &lt;G&gt;  The graph head type.
+ * @param &lt;V&gt;  The vertex type.
+ * @param &lt;E&gt;  The edge type.
+ * @param &lt;LG&gt; The type of the graph.
+ * @param &lt;GC&gt; The type of the graph collection.
+ */
+public class RandomWalkSampling&lt;
+  G extends GraphHead,
+  V extends Vertex,
+  E extends Edge,
+  LG extends BaseGraph&lt;G, V, E, LG, GC&gt;,
+  GC extends BaseGraphCollection&lt;G, V, E, LG, GC&gt;&gt; extends SamplingAlgorithm&lt;G, V, E, LG, GC&gt; {
+
+  /**
+   * Sample size
+   */
+  private final float sampleSize;
+  /**
+   * Number of start vertices
+   */
+  private final int numberOfStartVertices;
+  /**
+   * Probability of jumping instead of walking along edges
+   */
+  private final float jumpProbability;
+  /**
+   * Max iteration count
+   */
+  private final int maxIteration;
+
+  /**
+   * Constructor to create an instance of RandomWalk sampling
+   *
+   * @param sampleSize              sample size
+   * @param numberOfStartVertices   number of start vertices
+   */
+<span class="fc" id="L75">  public RandomWalkSampling(float sampleSize, int numberOfStartVertices) {</span>
+<span class="fc" id="L76">    this.sampleSize = sampleSize;</span>
+<span class="fc" id="L77">    this.numberOfStartVertices = numberOfStartVertices;</span>
+<span class="fc" id="L78">    this.jumpProbability = 0.1f;</span>
+<span class="fc" id="L79">    this.maxIteration = Integer.MAX_VALUE;</span>
+<span class="fc" id="L80">  }</span>
+
+  /**
+   * Constructor to create an instance of RandomWalk sampling
+   *
+   * @param sampleSize              sample size
+   * @param numberOfStartVertices   number of start vertices
+   * @param jumpProbability         probability to jump instead of walk
+   * @param maxIteration            max gelly iteration count
+   */
+  public RandomWalkSampling(float sampleSize, int numberOfStartVertices, float jumpProbability,
+<span class="nc" id="L91">    int maxIteration) {</span>
+
+<span class="nc" id="L93">    this.sampleSize = sampleSize;</span>
+<span class="nc" id="L94">    this.numberOfStartVertices = numberOfStartVertices;</span>
+<span class="nc" id="L95">    this.jumpProbability = jumpProbability;</span>
+<span class="nc" id="L96">    this.maxIteration = maxIteration;</span>
+<span class="nc" id="L97">  }</span>
+
+  @Override
+  protected LG sample(LG graph) {
+
+<span class="fc" id="L102">    LG gellyResult = graph.callForGraph(</span>
+      new KRandomJumpGellyVCI&lt;&gt;(numberOfStartVertices, maxIteration, jumpProbability, sampleSize));
+
+<span class="fc" id="L105">    DataSet&lt;V&gt; sampledVertices = gellyResult.getVertices()</span>
+<span class="fc" id="L106">      .filter(new ByProperty&lt;&gt;(SamplingConstants.PROPERTY_KEY_SAMPLED));</span>
+
+<span class="fc" id="L108">    DataSet&lt;E&gt; sampledEdges = graph.getEdges()</span>
+<span class="fc" id="L109">      .join(sampledVertices)</span>
+<span class="fc" id="L110">      .where(new SourceId&lt;&gt;()).equalTo(new Id&lt;&gt;())</span>
+<span class="fc" id="L111">      .with(new EdgeSourceVertexJoin&lt;&gt;(SamplingConstants.PROPERTY_KEY_SAMPLED))</span>
+<span class="fc" id="L112">      .join(sampledVertices)</span>
+<span class="fc" id="L113">      .where(1).equalTo(new Id&lt;&gt;())</span>
+<span class="fc" id="L114">      .with(new EdgeTargetVertexJoin&lt;&gt;(SamplingConstants.PROPERTY_KEY_SAMPLED))</span>
+<span class="fc" id="L115">      .filter(new EdgesWithSampledVerticesFilter&lt;&gt;(Neighborhood.BOTH))</span>
+<span class="fc" id="L116">      .map(new Value0Of3&lt;&gt;());</span>
+
+<span class="fc" id="L118">    return graph.getFactory().fromDataSets(sampledVertices, sampledEdges);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

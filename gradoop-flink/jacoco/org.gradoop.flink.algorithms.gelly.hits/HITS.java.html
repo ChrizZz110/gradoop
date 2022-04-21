@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>HITS.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Gradoop Flink</a> &gt; <a href="index.source.html" class="el_package">org.gradoop.flink.algorithms.gelly.hits</a> &gt; <span class="el_source">HITS.java</span></div><h1>HITS.java</h1><pre class="source lang-java linenums">/*
+ * Copyright © 2014 - 2021 Leipzig University (Database Research Group)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradoop.flink.algorithms.gelly.hits;
+
+import org.apache.flink.api.java.DataSet;
+import org.apache.flink.graph.Graph;
+import org.apache.flink.types.NullValue;
+import org.gradoop.common.model.api.entities.Edge;
+import org.gradoop.common.model.api.entities.GraphHead;
+import org.gradoop.common.model.api.entities.Vertex;
+import org.gradoop.common.model.impl.id.GradoopId;
+import org.gradoop.flink.algorithms.gelly.GradoopGellyAlgorithm;
+import org.gradoop.flink.algorithms.gelly.functions.EdgeToGellyEdgeWithNullValue;
+import org.gradoop.flink.algorithms.gelly.functions.VertexToGellyVertexWithNullValue;
+import org.gradoop.flink.algorithms.gelly.hits.functions.HITSToAttributes;
+import org.gradoop.flink.algorithms.gelly.hits.functions.HitsResultKeySelector;
+import org.gradoop.flink.model.api.epgm.BaseGraph;
+import org.gradoop.flink.model.api.epgm.BaseGraphCollection;
+import org.gradoop.flink.model.impl.functions.epgm.Id;
+
+/**
+ * A gradoop operator wrapping {@link org.apache.flink.graph.library.linkanalysis.HITS}
+ * &lt;p&gt;
+ * This algorithm can be configured to terminate either by a limit on the number of iterations, a
+ * convergence threshold, or both.
+ * &lt;p&gt;
+ * The Results are stored as properties of the vertices (with given keys).
+ *
+ * @param &lt;G&gt;  Gradoop graph head type.
+ * @param &lt;V&gt;  Gradoop vertex type.
+ * @param &lt;E&gt;  Gradoop edge type.
+ * @param &lt;LG&gt; Gradoop type of the graph.
+ * @param &lt;GC&gt; Gradoop type of the graph collection.
+ */
+public class HITS&lt;
+  G extends GraphHead,
+  V extends Vertex,
+  E extends Edge,
+  LG extends BaseGraph&lt;G, V, E, LG, GC&gt;,
+  GC extends BaseGraphCollection&lt;G, V, E, LG, GC&gt;&gt;
+  extends GradoopGellyAlgorithm&lt;G, V, E, LG, GC, NullValue, NullValue&gt; {
+
+  /**
+   * Property key to store the authority score.
+   */
+  private String authorityPropertyKey;
+
+  /**
+   * Property key to store the hub score.
+   */
+  private String hubPropertyKey;
+
+  /**
+   * Gelly HITS implementation
+   */
+  private org.apache.flink.graph.library.linkanalysis.HITS&lt;GradoopId, NullValue, NullValue&gt; hits;
+
+  /**
+   * HITS with fixed number of iterations
+   *
+   * @param authorityPropertyKey Property key to store the authority score.
+   * @param hubPropertyKey       Property key to store the hub score.
+   * @param iterations           number of iterations
+   */
+  public HITS(String authorityPropertyKey, String hubPropertyKey, int iterations) {
+<span class="fc" id="L79">    super(new VertexToGellyVertexWithNullValue&lt;&gt;(), new EdgeToGellyEdgeWithNullValue&lt;&gt;());</span>
+<span class="fc" id="L80">    this.authorityPropertyKey = authorityPropertyKey;</span>
+<span class="fc" id="L81">    this.hubPropertyKey = hubPropertyKey;</span>
+<span class="fc" id="L82">    hits = new org.apache.flink.graph.library.linkanalysis.HITS&lt;&gt;(iterations, Double.MAX_VALUE);</span>
+<span class="fc" id="L83">  }</span>
+
+
+  /**
+   * HITS with convergence threshold
+   *
+   * @param authorityPropertyKey Property key to store the authority score.
+   * @param hubPropertyKey       Property key to store the hub score.
+   * @param convergenceThreshold convergence threshold for sum of scores
+   */
+  public HITS(String authorityPropertyKey, String hubPropertyKey, double convergenceThreshold) {
+<span class="nc" id="L94">    super(new VertexToGellyVertexWithNullValue&lt;&gt;(), new EdgeToGellyEdgeWithNullValue&lt;&gt;());</span>
+<span class="nc" id="L95">    this.authorityPropertyKey = authorityPropertyKey;</span>
+<span class="nc" id="L96">    this.hubPropertyKey = hubPropertyKey;</span>
+<span class="nc" id="L97">    hits = new org.apache.flink.graph.library.linkanalysis.HITS&lt;&gt;(Integer.MAX_VALUE,</span>
+      convergenceThreshold);
+<span class="nc" id="L99">  }</span>
+
+  /**
+   * HITS with convergence threshold and maximum number of iterations
+   *
+   * @param authorityPropertyKey Property key to store the authority score.
+   * @param hubPropertyKey       Property key to store the hub score.
+   * @param convergenceThreshold convergence threshold for sum of scores
+   * @param maxIterations        maximum number of iterations
+   */
+  public HITS(String authorityPropertyKey, String hubPropertyKey, int maxIterations,
+    double convergenceThreshold) {
+<span class="nc" id="L111">    super(new VertexToGellyVertexWithNullValue&lt;&gt;(), new EdgeToGellyEdgeWithNullValue&lt;&gt;());</span>
+<span class="nc" id="L112">    this.authorityPropertyKey = authorityPropertyKey;</span>
+<span class="nc" id="L113">    this.hubPropertyKey = hubPropertyKey;</span>
+<span class="nc" id="L114">    hits =</span>
+      new org.apache.flink.graph.library.linkanalysis.HITS&lt;&gt;(maxIterations, convergenceThreshold);
+<span class="nc" id="L116">  }</span>
+
+
+  @Override
+  public LG executeInGelly(Graph&lt;GradoopId, NullValue, NullValue&gt; gellyGraph) throws Exception {
+
+<span class="fc" id="L122">    DataSet&lt;V&gt; newVertices = hits.runInternal(gellyGraph)</span>
+<span class="fc" id="L123">      .join(currentGraph.getVertices())</span>
+<span class="fc" id="L124">      .where(new HitsResultKeySelector()).equalTo(new Id&lt;&gt;())</span>
+<span class="fc" id="L125">      .with(new HITSToAttributes&lt;&gt;(authorityPropertyKey, hubPropertyKey));</span>
+
+<span class="fc" id="L127">    return currentGraph.getFactory()</span>
+<span class="fc" id="L128">      .fromDataSets(currentGraph.getGraphHead(), newVertices, currentGraph.getEdges());</span>
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

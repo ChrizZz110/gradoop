@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TransformGraphTransaction.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Gradoop Flink</a> &gt; <a href="index.source.html" class="el_package">org.gradoop.flink.model.impl.operators.transformation.functions</a> &gt; <span class="el_source">TransformGraphTransaction.java</span></div><h1>TransformGraphTransaction.java</h1><pre class="source lang-java linenums">/*
+ * Copyright © 2014 - 2021 Leipzig University (Database Research Group)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradoop.flink.model.impl.operators.transformation.functions;
+
+import org.apache.flink.api.common.functions.MapFunction;
+import org.gradoop.common.model.api.entities.Edge;
+import org.gradoop.common.model.api.entities.EdgeFactory;
+import org.gradoop.common.model.api.entities.GraphHead;
+import org.gradoop.common.model.api.entities.GraphHeadFactory;
+import org.gradoop.common.model.api.entities.Vertex;
+import org.gradoop.common.model.api.entities.VertexFactory;
+import org.gradoop.common.model.impl.pojo.EPGMEdge;
+import org.gradoop.common.model.impl.pojo.EPGMGraphHead;
+import org.gradoop.common.model.impl.pojo.EPGMVertex;
+import org.gradoop.common.util.GradoopConstants;
+import org.gradoop.flink.model.api.functions.TransformationFunction;
+import org.gradoop.flink.model.impl.layouts.transactional.tuples.GraphTransaction;
+
+import java.util.stream.Collectors;
+
+/**
+ * Transformation map function for graph transactions.
+ *
+ * Since {@link GraphTransaction} is only implemented for EPGM, this can only be used with EPGM graphs.
+ *
+ * @param &lt;G&gt; type of the graph head
+ * @param &lt;V&gt; the vertex type
+ * @param &lt;E&gt; the edge type
+ */
+public class TransformGraphTransaction&lt;G extends GraphHead, V extends Vertex, E extends Edge&gt;
+  implements MapFunction&lt;GraphTransaction, GraphTransaction&gt; {
+
+  /**
+   * Factory to init modified graph head.
+   */
+  private final GraphHeadFactory&lt;G&gt; graphHeadFactory;
+  /**
+   * Graph head modification function
+   */
+  private final TransformationFunction&lt;G&gt; graphHeadTransFunc;
+
+  /**
+   * Factory to init modified vertex.
+   */
+  private final VertexFactory&lt;V&gt; vertexFactory;
+
+  /**
+   * EPGMVertex modification function
+   */
+  private final TransformationFunction&lt;V&gt; vertexTransFunc;
+
+  /**
+   * Factory to init modified edge.
+   */
+  private final EdgeFactory&lt;E&gt; edgeFactory;
+  /**
+   * EPGMEdge modification function
+   */
+  private final TransformationFunction&lt;E&gt; edgeTransFunc;
+
+  /**
+   * Constructor
+   *
+   * @param graphHeadFactory graph head factory
+   * @param graphHeadTransFunc graph head transformation function
+   * @param vertexFactory vertex factory
+   * @param vertexTransFunc vertex transformation function
+   * @param edgeFactory edge factory
+   * @param edgeTransFunc edge transformation function
+   */
+  public TransformGraphTransaction(GraphHeadFactory&lt;G&gt; graphHeadFactory,
+    TransformationFunction&lt;G&gt; graphHeadTransFunc, VertexFactory&lt;V&gt; vertexFactory,
+    TransformationFunction&lt;V&gt; vertexTransFunc, EdgeFactory&lt;E&gt; edgeFactory,
+<span class="fc" id="L87">    TransformationFunction&lt;E&gt; edgeTransFunc) {</span>
+<span class="pc bpc" id="L88" title="1 of 2 branches missed.">    if (EPGMGraphHead.class.isAssignableFrom(graphHeadFactory.getType()) &amp;&amp;</span>
+<span class="pc bpc" id="L89" title="1 of 2 branches missed.">      EPGMVertex.class.isAssignableFrom(vertexFactory.getType()) &amp;&amp;</span>
+<span class="pc bpc" id="L90" title="1 of 2 branches missed.">      EPGMEdge.class.isAssignableFrom(edgeFactory.getType())) {</span>
+<span class="fc" id="L91">      this.graphHeadFactory = graphHeadFactory;</span>
+<span class="fc" id="L92">      this.graphHeadTransFunc = graphHeadTransFunc;</span>
+<span class="fc" id="L93">      this.vertexFactory = vertexFactory;</span>
+<span class="fc" id="L94">      this.vertexTransFunc = vertexTransFunc;</span>
+<span class="fc" id="L95">      this.edgeFactory = edgeFactory;</span>
+<span class="fc" id="L96">      this.edgeTransFunc = edgeTransFunc;</span>
+    } else {
+<span class="nc" id="L98">      throw new UnsupportedOperationException(&quot;This map function only supports EPGM graphs&quot;);</span>
+    }
+<span class="fc" id="L100">  }</span>
+
+  @Override
+  @SuppressWarnings(&quot;unchecked&quot;)
+  public GraphTransaction map(GraphTransaction transaction) throws Exception {
+<span class="fc bfc" id="L105" title="All 2 branches covered.">    if (graphHeadTransFunc != null) {</span>
+<span class="fc" id="L106">      transaction.setGraphHead((EPGMGraphHead) graphHeadTransFunc.apply(</span>
+<span class="fc" id="L107">        (G) transaction.getGraphHead(),</span>
+<span class="fc" id="L108">        graphHeadFactory.initGraphHead(</span>
+<span class="fc" id="L109">          transaction.getGraphHead().getId(), GradoopConstants.DEFAULT_GRAPH_LABEL)));</span>
+    }
+
+<span class="fc bfc" id="L112" title="All 2 branches covered.">    if (vertexTransFunc != null) {</span>
+<span class="fc" id="L113">      transaction.setVertices(transaction.getVertices().stream()</span>
+<span class="fc" id="L114">        .map(vertex -&gt; (EPGMVertex) vertexTransFunc.apply(</span>
+          (V) vertex,
+<span class="fc" id="L116">          vertexFactory.initVertex(</span>
+<span class="fc" id="L117">            vertex.getId(), GradoopConstants.DEFAULT_VERTEX_LABEL, vertex.getGraphIds())))</span>
+<span class="fc" id="L118">        .collect(Collectors.toSet()));</span>
+    }
+
+<span class="fc bfc" id="L121" title="All 2 branches covered.">    if (edgeTransFunc != null) {</span>
+<span class="fc" id="L122">      transaction.setEdges(transaction.getEdges().stream()</span>
+<span class="fc" id="L123">        .map(edge -&gt; (EPGMEdge) edgeTransFunc.apply(</span>
+          (E) edge,
+<span class="fc" id="L125">          edgeFactory.initEdge(</span>
+<span class="fc" id="L126">            edge.getId(), GradoopConstants.DEFAULT_EDGE_LABEL,</span>
+<span class="fc" id="L127">            edge.getSourceId(), edge.getTargetId(), edge.getGraphIds())))</span>
+<span class="fc" id="L128">        .collect(Collectors.toSet()));</span>
+    }
+<span class="fc" id="L130">    return transaction;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

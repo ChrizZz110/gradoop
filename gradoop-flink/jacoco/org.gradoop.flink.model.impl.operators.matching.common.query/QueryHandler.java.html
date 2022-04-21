@@ -1,0 +1,678 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>QueryHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Gradoop Flink</a> &gt; <a href="index.source.html" class="el_package">org.gradoop.flink.model.impl.operators.matching.common.query</a> &gt; <span class="el_source">QueryHandler.java</span></div><h1>QueryHandler.java</h1><pre class="source lang-java linenums">/*
+ * Copyright © 2014 - 2021 Leipzig University (Database Research Group)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradoop.flink.model.impl.operators.matching.common.query;
+
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import org.apache.commons.lang3.tuple.Pair;
+import org.gradoop.common.util.GradoopConstants;
+import org.gradoop.flink.model.impl.operators.matching.common.query.predicates.CNF;
+import org.gradoop.flink.model.impl.operators.matching.common.query.predicates.QueryPredicate;
+import org.gradoop.gdl.GDLHandler;
+import org.gradoop.gdl.exceptions.BailSyntaxErrorStrategy;
+import org.gradoop.gdl.model.Edge;
+import org.gradoop.gdl.model.GraphElement;
+import org.gradoop.gdl.model.Vertex;
+
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+/**
+ * Wraps a {@link GDLHandler} and adds functionality needed for query
+ * processing during graph pattern matching.
+ */
+public class QueryHandler {
+  /**
+   * GDL handler
+   */
+  private final GDLHandler gdlHandler;
+  /**
+   * Graph diameter
+   */
+  private Integer diameter;
+  /**
+   * Graph radius
+   */
+  private Integer radius;
+  /**
+   * Graph components
+   */
+  private Map&lt;Integer, Set&lt;String&gt;&gt; components;
+  /**
+   * Cache: vId --&gt; Vertex with Id == vId
+   */
+  private Map&lt;Long, Vertex&gt; idToVertexCache;
+  /**
+   * Cache: eId --&gt; Edge with Id == eId
+   */
+  private Map&lt;Long, Edge&gt; idToEdgeCache;
+  /**
+   * Cache: l -&gt; Vertices with Label == l
+   */
+  private Map&lt;String, Set&lt;Vertex&gt;&gt; labelToVertexCache;
+  /**
+   * Cache: l -&gt; Edges with Label = l
+   */
+  private Map&lt;String, Set&lt;Edge&gt;&gt; labelToEdgeCache;
+  /**
+   * Cache: vId -&gt; Edges with Source Id == vId
+   */
+  private Map&lt;Long, Set&lt;Edge&gt;&gt; sourceIdToEdgeCache;
+  /**
+   * Cache: vId -&gt; Edges with Target Id == vId
+   */
+  private Map&lt;Long, Set&lt;Edge&gt;&gt; targetIdToEdgeCache;
+
+  /**
+   * The edge cache of the GDL handler.
+   */
+  private Map&lt;String, Edge&gt; edgeCache;
+
+  /**
+   * The vertex cache of the GDL handler.
+   */
+  private Map&lt;String, Vertex&gt; vertexCache;
+
+  /**
+   * Creates a new query handler.
+   *
+   * @param gdlString GDL query string
+   */
+<span class="fc" id="L101">  public QueryHandler(String gdlString) {</span>
+<span class="fc" id="L102">    gdlHandler = new GDLHandler.Builder()</span>
+<span class="fc" id="L103">      .setDefaultGraphLabel(GradoopConstants.DEFAULT_GRAPH_LABEL)</span>
+<span class="fc" id="L104">      .setDefaultVertexLabel(GradoopConstants.DEFAULT_VERTEX_LABEL)</span>
+<span class="fc" id="L105">      .setDefaultEdgeLabel(GradoopConstants.DEFAULT_EDGE_LABEL)</span>
+<span class="fc" id="L106">      .setErrorStrategy(new BailSyntaxErrorStrategy())</span>
+<span class="fc" id="L107">      .buildFromString(gdlString);</span>
+<span class="fc" id="L108">    edgeCache = gdlHandler.getEdgeCache(true, true);</span>
+<span class="fc" id="L109">    vertexCache = gdlHandler.getVertexCache(true, true);</span>
+<span class="fc" id="L110">  }</span>
+
+  /**
+   * Returns all vertices in the query.
+   *
+   * @return vertices
+   */
+  public Collection&lt;Vertex&gt; getVertices() {
+<span class="fc" id="L118">    return gdlHandler.getVertices();</span>
+  }
+
+  /**
+   * Returns all edges in the query.
+   *
+   * @return edges
+   */
+  public Collection&lt;Edge&gt; getEdges() {
+<span class="fc" id="L127">    return gdlHandler.getEdges();</span>
+  }
+
+  /**
+   * Returns the query graph as a collection of triples.
+   *
+   * @return triples
+   */
+  public Collection&lt;Triple&gt; getTriples() {
+<span class="fc" id="L136">    return getEdges().stream()</span>
+<span class="fc" id="L137">      .map(e -&gt; new Triple(</span>
+<span class="fc" id="L138">        getVertexById(e.getSourceVertexId()), e, getVertexById(e.getTargetVertexId())))</span>
+<span class="fc" id="L139">      .collect(Collectors.toList());</span>
+  }
+
+  /**
+   * Returns all variables contained in the pattern.
+   *
+   * @return all query variables
+   */
+  public Set&lt;String&gt; getAllVariables() {
+<span class="fc" id="L148">    return Sets.union(getVertexVariables(), getEdgeVariables());</span>
+  }
+
+  /**
+   * Returns all vertex variables contained in the pattern.
+   *
+   * @return all vertex variables
+   */
+  public Set&lt;String&gt; getVertexVariables() {
+<span class="fc" id="L157">    return vertexCache.keySet();</span>
+  }
+
+  /**
+   * Returns all edge variables contained in the pattern.
+   *
+   * @return all edge variables
+   */
+  public Set&lt;String&gt; getEdgeVariables() {
+<span class="fc" id="L166">    return edgeCache.keySet();</span>
+  }
+
+  /**
+   * Returns all available predicates in Conjunctive Normal Form {@link CNF}. If there are no
+   * predicated defined in the query, a CNF containing zero predicates is returned.
+   *
+   * @return predicates
+   */
+  public CNF getPredicates() {
+<span class="fc bfc" id="L176" title="All 2 branches covered.">    if (gdlHandler.getPredicates().isPresent()) {</span>
+<span class="fc" id="L177">      return QueryPredicate.createFrom(gdlHandler.getPredicates().get()).asCNF();</span>
+    } else {
+<span class="fc" id="L179">      return new CNF();</span>
+    }
+  }
+
+  /**
+   * Returns the number of vertices in the query graph.
+   *
+   * @return vertex count
+   */
+  public int getVertexCount() {
+<span class="fc" id="L189">    return getVertices().size();</span>
+  }
+
+  /**
+   * Returns the number of edges in the query graph.
+   *
+   * @return edge count
+   */
+  public int getEdgeCount() {
+<span class="fc" id="L198">    return getEdges().size();</span>
+  }
+
+  /**
+   * Checks if the graph returns a single vertex and no edges (no loops).
+   *
+   * @return true, if single vertex graph
+   */
+  public boolean isSingleVertexGraph() {
+<span class="fc bfc" id="L207" title="All 4 branches covered.">    return getVertexCount() == 1 &amp;&amp; getEdgeCount() == 0;</span>
+  }
+
+  /**
+   * Returns the diameter of the query graph.
+   *
+   * @return diameter
+   */
+  public int getDiameter() {
+<span class="pc bpc" id="L216" title="1 of 2 branches missed.">    if (diameter == null) {</span>
+<span class="fc" id="L217">      diameter = GraphMetrics.getDiameter(this);</span>
+    }
+<span class="fc" id="L219">    return diameter;</span>
+  }
+
+  /**
+   * Returns the radius of the query graph.
+   *
+   * @return radius
+   */
+  public int getRadius() {
+<span class="pc bpc" id="L228" title="1 of 2 branches missed.">    if (radius == null) {</span>
+<span class="fc" id="L229">      radius = GraphMetrics.getRadius(this);</span>
+    }
+<span class="fc" id="L231">    return radius;</span>
+  }
+
+  /**
+   * Returns the mapping of vertices to connected graph components
+   *
+   * @return connected components
+   */
+  public Map&lt;Integer, Set&lt;String&gt;&gt; getComponents() {
+<span class="nc bnc" id="L240" title="All 2 branches missed.">    if (components == null) {</span>
+<span class="nc" id="L241">      components = GraphMetrics.getComponents(this);</span>
+    }
+<span class="nc" id="L243">    return components;</span>
+  }
+
+  /**
+   * Checks if the given variable points to a vertex.
+   *
+   * @param variable the elements variable
+   * @return True if the variable points to a vertex
+   */
+  public boolean isVertex(String variable) {
+<span class="fc" id="L253">    return vertexCache.containsKey(variable);</span>
+  }
+
+  /**
+   * Checks if the given variable points to an edge.
+   *
+   * @param variable the elements variable
+   * @return True if the variable points to an edge
+   */
+  public boolean isEdge(String variable) {
+<span class="fc" id="L263">    return edgeCache.containsKey(variable);</span>
+  }
+
+  /**
+   * Returns the vertex associated with the given id or {@code null} if the
+   * vertex does not exist.
+   *
+   * @param id vertex id
+   * @return vertex or {@code null}
+   */
+  public Vertex getVertexById(Long id) {
+<span class="fc bfc" id="L274" title="All 2 branches covered.">    if (idToVertexCache == null) {</span>
+<span class="fc" id="L275">      idToVertexCache = initCache(getVertices(), Vertex::getId, Function.identity());</span>
+    }
+<span class="fc" id="L277">    return idToVertexCache.get(id);</span>
+  }
+
+  /**
+   * Returns the edge associated with the given id or {@code null} if the
+   * edge does not exist.
+   *
+   * @param id edge id
+   * @return edge or {@code null}
+   */
+  public Edge getEdgeById(Long id) {
+<span class="fc bfc" id="L288" title="All 2 branches covered.">    if (idToEdgeCache == null) {</span>
+<span class="fc" id="L289">      idToEdgeCache = initCache(getEdges(), Edge::getId, Function.identity());</span>
+    }
+<span class="fc" id="L291">    return idToEdgeCache.get(id);</span>
+  }
+
+  /**
+   * Returns the vertex associated with the given variable or {@code null} if the variable does
+   * not exist. The variable can be either user-defined or auto-generated.
+   *
+   * @param variable query vertex variable
+   * @return vertex or {@code null}
+   */
+  public Vertex getVertexByVariable(String variable) {
+<span class="fc" id="L302">    return vertexCache.get(variable);</span>
+  }
+
+
+  /**
+   * Returns the Edge associated with the given variable or {@code null} if the variable does
+   * not exist. The variable can be either user-defined or auto-generated.
+   *
+   * @param variable query edge variable
+   * @return edge or {@code null}
+   */
+  public Edge getEdgeByVariable(String variable) {
+<span class="fc" id="L314">    return edgeCache.get(variable);</span>
+  }
+
+  /**
+   * Returns all vertices with the given label or {@code null} if there are no
+   * vertices with that label.
+   *
+   * @param label vertex label
+   * @return vertices or {@code null}
+   */
+  public Collection&lt;Vertex&gt; getVerticesByLabel(String label) {
+<span class="pc bpc" id="L325" title="1 of 2 branches missed.">    if (labelToVertexCache == null) {</span>
+<span class="fc" id="L326">      labelToVertexCache = initSetCache(getVertices(), Vertex::getLabel, Function.identity());</span>
+    }
+<span class="fc" id="L328">    return labelToVertexCache.get(label);</span>
+  }
+
+  /**
+   * Returns all edges with the given label or {@code null} if there are no
+   * edges with that label.
+   *
+   * @param label edge label
+   * @return edges or {@code null}
+   */
+  public Collection&lt;Edge&gt; getEdgesByLabel(String label) {
+<span class="pc bpc" id="L339" title="1 of 2 branches missed.">    if (labelToEdgeCache == null) {</span>
+<span class="fc" id="L340">      labelToEdgeCache = initSetCache(getEdges(), Edge::getLabel, Function.identity());</span>
+    }
+<span class="fc" id="L342">    return labelToEdgeCache.get(label);</span>
+  }
+
+  /**
+   * Returns all outgoing and incoming edges that are incident to the given
+   * vertex id.
+   *
+   * @param vertexId vertex id
+   * @return incoming and outgoing edges
+   */
+  public Collection&lt;Edge&gt; getEdgesByVertexId(Long vertexId) {
+<span class="fc" id="L353">    List&lt;Edge&gt; result = Lists.newArrayList();</span>
+<span class="fc bfc" id="L354" title="All 2 branches covered.">    if (getEdgesBySourceVertexId(vertexId) != null) {</span>
+<span class="fc" id="L355">      result.addAll(getEdgesBySourceVertexId(vertexId));</span>
+    }
+<span class="fc bfc" id="L357" title="All 2 branches covered.">    if (getEdgesByTargetVertexId(vertexId) != null) {</span>
+<span class="fc" id="L358">      result.addAll(getEdgesByTargetVertexId(vertexId));</span>
+    }
+<span class="fc" id="L360">    return result;</span>
+  }
+
+  /**
+   * Returns all edges that start at the given vertex id or {@code null} if the
+   * given vertex has no outgoing edges.
+   *
+   * @param vertexId vertex id
+   * @return outgoing edges or {@code null}
+   */
+  public Collection&lt;Edge&gt; getEdgesBySourceVertexId(Long vertexId) {
+<span class="fc bfc" id="L371" title="All 2 branches covered.">    if (sourceIdToEdgeCache == null) {</span>
+<span class="fc" id="L372">      sourceIdToEdgeCache = initSetCache(getEdges(), Edge::getSourceVertexId, Function.identity());</span>
+    }
+<span class="fc" id="L374">    return sourceIdToEdgeCache.get(vertexId);</span>
+  }
+
+  /**
+   * Returns all edge ids that start at the given vertex id or {@code null} if
+   * the given vertex has no outgoing edges.
+   *
+   * @param vertexId vertex id
+   * @return outgoing edge ids or {@code null}
+   */
+  public Collection&lt;Long&gt; getEdgeIdsBySourceVertexId(Long vertexId) {
+<span class="fc" id="L385">    return getIds(getEdgesBySourceVertexId(vertexId));</span>
+  }
+
+  /**
+   * Returns all edges that point to the given vertex id or {@code null} if the
+   * given vertex has no incoming edges.
+   *
+   * @param vertexId vertex id
+   * @return incoming edges or {@code null}
+   */
+  public Collection&lt;Edge&gt; getEdgesByTargetVertexId(Long vertexId) {
+<span class="fc bfc" id="L396" title="All 2 branches covered.">    if (targetIdToEdgeCache == null) {</span>
+<span class="fc" id="L397">      targetIdToEdgeCache = initSetCache(getEdges(), Edge::getTargetVertexId, Function.identity());</span>
+    }
+<span class="fc" id="L399">    return targetIdToEdgeCache.get(vertexId);</span>
+  }
+
+  /**
+   * Returns all edge ids that point to the given vertex id or {@code null} if
+   * the given vertex has no incoming edges.
+   *
+   * @param vertexId vertex id
+   * @return incoming edge ids or {@code null}
+   */
+  public Collection&lt;Long&gt; getEdgeIdsByTargetVertexId(Long vertexId) {
+<span class="nc" id="L410">    return getIds(getEdgesByTargetVertexId(vertexId));</span>
+  }
+
+  /**
+   * Returns all edges that point to the source vertex of the given edge or
+   * {@code null} if the edge has no predecessors.
+   *
+   * @param edgeId edge id
+   * @return preceding edges or {@code null}
+   */
+  public Collection&lt;Edge&gt; getPredecessors(Long edgeId) {
+<span class="fc" id="L421">    Collection&lt;Edge&gt; predecessors =</span>
+<span class="fc" id="L422">      getEdgesByTargetVertexId(getEdgeById(edgeId).getSourceVertexId());</span>
+<span class="pc bpc" id="L423" title="1 of 2 branches missed.">    return predecessors != null ?</span>
+<span class="pc" id="L424">      Lists.newArrayList(predecessors) : Lists.newArrayList();</span>
+  }
+
+  /**
+   * Returns all edges that start at the target vertex of the given edge or
+   * {@code null} if the edge has no successors.
+   *
+   * @param edgeId edge id
+   * @return succeeding edges or {@code null}
+   */
+  public Collection&lt;Edge&gt; getSuccessors(Long edgeId) {
+<span class="fc" id="L435">    Collection&lt;Edge&gt; successors =</span>
+<span class="fc" id="L436">      getEdgesBySourceVertexId(getEdgeById(edgeId).getTargetVertexId());</span>
+<span class="pc bpc" id="L437" title="1 of 2 branches missed.">    return successors != null ?</span>
+<span class="pc" id="L438">      Lists.newArrayList(successors) : Lists.newArrayList();</span>
+  }
+
+  /**
+   * Returns all edge ids that point to the source vertex of the given edge or
+   * {@code null} if the edge has no predecessors.
+   *
+   * @param edgeId edge id
+   * @return preceding edge ids or {@code null}
+   */
+  public Collection&lt;Long&gt; getPredecessorIds(Long edgeId) {
+<span class="nc" id="L449">    return getIds(getPredecessors(edgeId));</span>
+  }
+
+  /**
+   * Returns all edge ids that start at the target vertex of the given edge or
+   * {@code null} if the edge has no successors.
+   *
+   * @param edgeId edge id
+   * @return succeeding edge ids or {@code null}
+   */
+  public Collection&lt;Long&gt; getSuccessorIds(Long edgeId) {
+<span class="nc" id="L460">    return getIds(getSuccessors(edgeId));</span>
+  }
+
+  /**
+   * Returns all vertices that are adjacent to the given vertex (without
+   * considering edge direction).
+   *
+   * @param vertexId vertex id
+   * @return adjacent vertices
+   */
+  public Collection&lt;Vertex&gt; getNeighbors(Long vertexId) {
+<span class="fc" id="L471">    Set&lt;Vertex&gt; neighbors = Sets.newHashSet();</span>
+<span class="fc" id="L472">    Collection&lt;Edge&gt; outgoingEdges = getEdgesBySourceVertexId(vertexId);</span>
+<span class="fc bfc" id="L473" title="All 2 branches covered.">    if (outgoingEdges != null) {</span>
+<span class="fc bfc" id="L474" title="All 2 branches covered.">      for (Edge edge : outgoingEdges) {</span>
+<span class="fc" id="L475">        neighbors.add(getVertexById(edge.getTargetVertexId()));</span>
+<span class="fc" id="L476">      }</span>
+    }
+<span class="fc" id="L478">    Collection&lt;Edge&gt; incomingEdges = getEdgesByTargetVertexId(vertexId);</span>
+<span class="fc bfc" id="L479" title="All 2 branches covered.">    if (incomingEdges != null) {</span>
+<span class="fc bfc" id="L480" title="All 2 branches covered.">      for (Edge edge : incomingEdges) {</span>
+<span class="fc" id="L481">        neighbors.add(getVertexById(edge.getSourceVertexId()));</span>
+<span class="fc" id="L482">      }</span>
+    }
+<span class="fc" id="L484">    return neighbors;</span>
+  }
+
+  /**
+   * Returns all vertex ids that are adjacent to the given vertex (without
+   * considering edge direction).
+   *
+   * @param vertexId vertex id
+   * @return adjacent vertex ids
+   */
+  public Collection&lt;Long&gt; getNeighborIds(Long vertexId) {
+<span class="fc" id="L495">    Set&lt;Long&gt; neighbors = Sets.newHashSet();</span>
+<span class="fc bfc" id="L496" title="All 2 branches covered.">    for (Vertex vertex : getNeighbors(vertexId)) {</span>
+<span class="fc" id="L497">      neighbors.add(vertex.getId());</span>
+<span class="fc" id="L498">    }</span>
+<span class="fc" id="L499">    return neighbors;</span>
+  }
+
+  /**
+   * Returns a mapping between the given variables (if existent) and the corresponding element
+   * label.
+   *
+   * @param variables query variables
+   * @return mapping between existing variables and their corresponding label
+   */
+  public Map&lt;String, String&gt; getLabelsForVariables(Collection&lt;String&gt; variables) {
+<span class="fc" id="L510">    return variables.stream()</span>
+<span class="pc bpc" id="L511" title="1 of 4 branches missed.">      .filter(var -&gt; isEdge(var) || isVertex(var))</span>
+<span class="fc" id="L512">      .map(var -&gt; {</span>
+<span class="fc bfc" id="L513" title="All 2 branches covered.">        if (isEdge(var)) {</span>
+<span class="fc" id="L514">          return Pair.of(var, getEdgeByVariable(var).getLabel());</span>
+        } else {
+<span class="fc" id="L516">          return Pair.of(var, getVertexByVariable(var).getLabel());</span>
+        }
+<span class="fc" id="L518">      }).collect(Collectors.toMap(Pair::getLeft, Pair::getRight));</span>
+  }
+
+  /**
+   * Returns a mapping from edge variable to the corresponding source and target variables.
+   *
+   * @return mapping from edge variable to source/target variable
+   */
+  public Map&lt;String, Pair&lt;String, String&gt;&gt; getSourceTargetVariables() {
+<span class="fc" id="L527">    return getEdges().stream()</span>
+<span class="fc" id="L528">      .map(e -&gt; Pair.of(e.getVariable(), Pair</span>
+<span class="fc" id="L529">        .of(getVertexById(e.getSourceVertexId()).getVariable(),</span>
+<span class="fc" id="L530">          getVertexById(e.getTargetVertexId()).getVariable())))</span>
+<span class="fc" id="L531">      .collect(Collectors.toMap(Pair::getLeft, Pair::getRight));</span>
+  }
+
+  /**
+   * Returns the ids of the given graph elements (vertex/edge).
+   *
+   * @param elements graph elements
+   * @param &lt;EL&gt; element type
+   * @return element identifiers
+   */
+  private &lt;EL extends GraphElement&gt; Collection&lt;Long&gt;
+  getIds(Collection&lt;EL&gt; elements) {
+<span class="fc" id="L543">    List&lt;Long&gt; ids = null;</span>
+<span class="pc bpc" id="L544" title="1 of 2 branches missed.">    if (elements != null) {</span>
+<span class="fc" id="L545">      ids = Lists.newArrayListWithCapacity(elements.size());</span>
+<span class="fc bfc" id="L546" title="All 2 branches covered.">      for (EL el : elements) {</span>
+<span class="fc" id="L547">        ids.add(el.getId());</span>
+<span class="fc" id="L548">      }</span>
+    }
+<span class="fc" id="L550">    return ids;</span>
+  }
+
+  /**
+   * Returns all vertices that have a minimum eccentricity.
+   *
+   * @return center vertices
+   */
+  public Collection&lt;Vertex&gt; getCenterVertices() {
+<span class="fc" id="L559">    List&lt;Vertex&gt; result = Lists.newArrayList();</span>
+<span class="fc bfc" id="L560" title="All 2 branches covered.">    for (Long vId : getCentralVertexIds()) {</span>
+<span class="fc" id="L561">      result.add(getVertexById(vId));</span>
+<span class="fc" id="L562">    }</span>
+<span class="fc" id="L563">    return result;</span>
+  }
+
+  /**
+   * Returns a single center vertex of the query graph.
+   *
+   * @return center vertex
+   */
+  public Vertex getCenterVertex() {
+<span class="nc" id="L572">    return getCenterVertices().iterator().next();</span>
+  }
+
+  /**
+   * Returns all vertex ids that have a minimum eccentricity.
+   *
+   * @return vertex identifiers
+   */
+  public Collection&lt;Long&gt; getCentralVertexIds() {
+<span class="fc" id="L581">    Map&lt;Long, Integer&gt; eccMap = GraphMetrics.getEccentricity(this);</span>
+<span class="fc" id="L582">    Integer min = Collections.min(eccMap.values());</span>
+<span class="fc" id="L583">    List&lt;Long&gt; result = Lists.newArrayList();</span>
+<span class="fc bfc" id="L584" title="All 2 branches covered.">    for (Map.Entry&lt;Long, Integer&gt; eccEntry : eccMap.entrySet()) {</span>
+<span class="fc bfc" id="L585" title="All 2 branches covered.">      if (eccEntry.getValue().equals(min)) {</span>
+<span class="fc" id="L586">        result.add(eccEntry.getKey());</span>
+      }
+<span class="fc" id="L588">    }</span>
+<span class="fc" id="L589">    return result;</span>
+  }
+
+  /**
+   * Initializes a cache for the given data where every key maps to exactly one element (injective).
+   * Key selector will be called on every element to extract the caches key.
+   * Value selector will be called on every element to extract the value.
+   * Returns a cache of type
+   * KT -&gt; VT
+   *
+   * @param elements elements the cache will be build from
+   * @param keySelector key selector function extraction cache keys from elements
+   * @param valueSelector value selector function extraction cache values from elements
+   * @param &lt;EL&gt; the element type
+   * @param &lt;KT&gt; the cache key type
+   * @param &lt;VT&gt; the cache value type
+   * @return cache KT -&gt; VT
+   */
+  private &lt;EL, KT, VT&gt; Map&lt;KT, VT&gt; initCache(Collection&lt;EL&gt; elements,
+    Function&lt;EL, KT&gt; keySelector, Function&lt;EL, VT&gt; valueSelector) {
+
+<span class="fc" id="L610">    return elements.stream().collect(Collectors.toMap(keySelector, valueSelector));</span>
+  }
+
+  /**
+   * Initializes a cache for the given elements where every key maps to multiple elements.
+   * Key selector will be called on every element to extract the caches key.
+   * Value selector will be called on every element to extract the value.
+   * Returns a cache of the form
+   * KT -&gt; Set&lt;VT&gt;
+   *
+   * @param elements elements the cache will be build from
+   * @param keySelector key selector function extraction cache keys from elements
+   * @param valueSelector value selector function extraction cache values from elements
+   * @param &lt;EL&gt; the element type
+   * @param &lt;KT&gt; the cache key type
+   * @param &lt;VT&gt; the cache value type
+   * @return cache KT -&gt; Set&lt;VT&gt;
+   */
+  private &lt;EL, KT, VT&gt; Map&lt;KT, Set&lt;VT&gt;&gt; initSetCache(Collection&lt;EL&gt; elements,
+    Function&lt;EL, KT&gt; keySelector, Function&lt;EL, VT&gt; valueSelector) {
+
+<span class="fc" id="L631">    return elements.stream()</span>
+<span class="fc" id="L632">      .collect(</span>
+<span class="fc" id="L633">        Collectors.groupingBy(</span>
+          keySelector,
+<span class="fc" id="L635">          Collectors.mapping(valueSelector, Collectors.toSet())</span>
+      ));
+  }
+
+  /**
+   * Update variable names of vertices and edges with a generated variable name.
+   * This will also update the vertex- and edge-caches of this handler.
+   *
+   * @param renameFunction The renaming function, mapping old to new variable names.
+   */
+  public void updateGeneratedVariableNames(Function&lt;String, String&gt; renameFunction) {
+<span class="fc" id="L646">    Set&lt;String&gt; generatedEdgeVariables = gdlHandler.getEdgeCache(false, true).keySet();</span>
+<span class="fc" id="L647">    Set&lt;String&gt; generatedVertexVariables = gdlHandler.getVertexCache(false, true).keySet();</span>
+<span class="fc" id="L648">    Map&lt;String, Vertex&gt; newVertexCache = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L649">    Map&lt;String, Edge&gt; newEdgeCache = new HashMap&lt;&gt;();</span>
+    // Update vertices.
+<span class="fc bfc" id="L651" title="All 2 branches covered.">    for (Vertex vertex : getVertices()) {</span>
+<span class="fc" id="L652">      final String variable = vertex.getVariable();</span>
+<span class="pc bpc" id="L653" title="1 of 2 branches missed.">      if (generatedVertexVariables.contains(variable)) {</span>
+<span class="nc" id="L654">        vertex.setVariable(renameFunction.apply(variable));</span>
+      }
+<span class="fc" id="L656">      newVertexCache.put(vertex.getVariable(), vertex);</span>
+<span class="fc" id="L657">    }</span>
+    // Update edges.
+<span class="fc bfc" id="L659" title="All 2 branches covered.">    for (Edge edge : getEdges()) {</span>
+<span class="fc" id="L660">      final String variable = edge.getVariable();</span>
+<span class="fc bfc" id="L661" title="All 2 branches covered.">      if (generatedEdgeVariables.contains(variable)) {</span>
+<span class="fc" id="L662">        edge.setVariable(renameFunction.apply(variable));</span>
+      }
+<span class="fc" id="L664">      newEdgeCache.put(edge.getVariable(), edge);</span>
+<span class="fc" id="L665">    }</span>
+<span class="fc" id="L666">    vertexCache = Collections.unmodifiableMap(newVertexCache);</span>
+<span class="fc" id="L667">    edgeCache = Collections.unmodifiableMap(newEdgeCache);</span>
+<span class="fc" id="L668">  }</span>
+
+  /**
+   * Returns the GDL handler
+   * @return GDL handler
+   */
+  public GDLHandler getGdlHandler() {
+<span class="nc" id="L675">    return gdlHandler;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

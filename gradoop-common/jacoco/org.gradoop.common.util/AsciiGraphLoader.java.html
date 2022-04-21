@@ -1,0 +1,587 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AsciiGraphLoader.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Gradoop Common</a> &gt; <a href="index.source.html" class="el_package">org.gradoop.common.util</a> &gt; <span class="el_source">AsciiGraphLoader.java</span></div><h1>AsciiGraphLoader.java</h1><pre class="source lang-java linenums">/*
+ * Copyright © 2014 - 2021 Leipzig University (Database Research Group)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradoop.common.util;
+
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+import org.gradoop.common.model.api.entities.ElementFactoryProvider;
+import org.gradoop.common.model.api.entities.GraphHead;
+import org.gradoop.common.model.api.entities.Edge;
+import org.gradoop.common.model.api.entities.Vertex;
+import org.gradoop.common.model.impl.id.GradoopId;
+import org.gradoop.common.model.impl.id.GradoopIdSet;
+import org.gradoop.common.model.impl.properties.Properties;
+import org.gradoop.gdl.GDLHandler;
+import org.gradoop.gdl.exceptions.BailSyntaxErrorStrategy;
+import org.gradoop.gdl.model.Graph;
+import org.gradoop.gdl.model.GraphElement;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Collection;
+import java.util.Map;
+
+/**
+ * Creates collections of graphs, vertices and edges from a given GDL script.
+ *
+ * @see &lt;a href=&quot;https://github.com/dbs-leipzig/gdl&quot;&gt;GDL on GitHub&lt;/a&gt;
+ *
+ * @param &lt;G&gt; graph head type
+ * @param &lt;V&gt; vertex type
+ * @param &lt;E&gt; edge type
+ */
+public class AsciiGraphLoader&lt;G extends GraphHead, V extends Vertex, E extends Edge&gt; {
+
+  /**
+   * Factory provider for graph elements.
+   */
+  private final ElementFactoryProvider&lt;G, V, E&gt; elementFactoryProvider;
+
+  /**
+   * Used to parse GDL scripts.
+   */
+  private final GDLHandler gdlHandler;
+
+  /**
+   * Stores all graphs contained in the GDL script.
+   */
+  private final Map&lt;GradoopId, G&gt; graphHeads;
+  /**
+   * Mapping between GDL ids and Gradoop IDs.
+   */
+  private final Map&lt;Long, GradoopId&gt; graphHeadIds;
+  /**
+   * Stores all vertices contained in the GDL script.
+   */
+  private final Map&lt;GradoopId, V&gt; vertices;
+  /**
+   * Mapping between GDL ids and Gradoop IDs.
+   */
+  private final Map&lt;Long, GradoopId&gt; vertexIds;
+  /**
+   * Stores all edges contained in the GDL script.
+   */
+  private final Map&lt;GradoopId, E&gt; edges;
+  /**
+   * Mapping between GDL ids and Gradoop IDs.
+   */
+  private final Map&lt;Long, GradoopId&gt; edgeIds;
+
+  /**
+   * Stores graphs that are assigned to a variable.
+   */
+  private final Map&lt;String, G&gt; graphHeadCache;
+  /**
+   * Stores vertices that are assigned to a variable.
+   */
+  private final Map&lt;String, V&gt; vertexCache;
+  /**
+   * Stores edges that are assigned to a variable.
+   */
+  private final Map&lt;String, E&gt; edgeCache;
+
+  /**
+   * Creates a new AsciiGraphLoader.
+   *
+   * @param gdlHandler GDL Handler
+   * @param elementFactoryProvider Factory provider for EPGM elements.
+   */
+  private AsciiGraphLoader(GDLHandler gdlHandler,
+<span class="fc" id="L105">                           ElementFactoryProvider&lt;G, V, E&gt; elementFactoryProvider) {</span>
+<span class="fc" id="L106">    this.gdlHandler = gdlHandler;</span>
+<span class="fc" id="L107">    this.elementFactoryProvider = elementFactoryProvider;</span>
+
+<span class="fc" id="L109">    this.graphHeads     = Maps.newHashMap();</span>
+<span class="fc" id="L110">    this.vertices       = Maps.newHashMap();</span>
+<span class="fc" id="L111">    this.edges          = Maps.newHashMap();</span>
+
+<span class="fc" id="L113">    this.graphHeadIds   = Maps.newHashMap();</span>
+<span class="fc" id="L114">    this.vertexIds      = Maps.newHashMap();</span>
+<span class="fc" id="L115">    this.edgeIds        = Maps.newHashMap();</span>
+
+<span class="fc" id="L117">    this.graphHeadCache = Maps.newHashMap();</span>
+<span class="fc" id="L118">    this.vertexCache    = Maps.newHashMap();</span>
+<span class="fc" id="L119">    this.edgeCache      = Maps.newHashMap();</span>
+
+<span class="fc" id="L121">    init();</span>
+<span class="fc" id="L122">  }</span>
+
+  /**
+   * Creates an AsciiGraphLoader from the given ASCII GDL string.
+   *
+   * @param asciiGraph GDL string
+   * @param elementFactoryProvider Factory provider for graph elements.
+   * @param &lt;G&gt; graph head type
+   * @param &lt;V&gt; vertex type
+   * @param &lt;E&gt; edge type
+   *
+   * @return AsciiGraphLoader
+   */
+  public static
+  &lt;G extends GraphHead, V extends Vertex, E extends Edge&gt;
+  AsciiGraphLoader&lt;G, V, E&gt; fromString(String asciiGraph,
+                                       ElementFactoryProvider&lt;G, V, E&gt; elementFactoryProvider) {
+<span class="fc" id="L139">    return new AsciiGraphLoader&lt;&gt;(new GDLHandler.Builder()</span>
+<span class="fc" id="L140">      .setDefaultGraphLabel(GradoopConstants.DEFAULT_GRAPH_LABEL)</span>
+<span class="fc" id="L141">      .setDefaultVertexLabel(GradoopConstants.DEFAULT_VERTEX_LABEL)</span>
+<span class="fc" id="L142">      .setDefaultEdgeLabel(GradoopConstants.DEFAULT_EDGE_LABEL)</span>
+<span class="fc" id="L143">      .setErrorStrategy(new BailSyntaxErrorStrategy())</span>
+<span class="fc" id="L144">      .buildFromString(asciiGraph),</span>
+      elementFactoryProvider);
+  }
+
+  /**
+   * Creates an AsciiGraphLoader from the given ASCII GDL file.
+   *
+   * @param fileName File that contains a GDL script
+   * @param elementFactoryProvider Factory provider for graph elements.
+   * @param &lt;G&gt; graph head type
+   * @param &lt;V&gt; vertex type
+   * @param &lt;E&gt; edge type
+   *
+   * @return AsciiGraphLoader
+   * @throws IOException on failure
+   */
+  public static
+  &lt;G extends GraphHead, V extends Vertex, E extends Edge&gt;
+  AsciiGraphLoader&lt;G, V, E&gt; fromFile(String fileName,
+                                     ElementFactoryProvider&lt;G, V, E&gt; elementFactoryProvider)
+    throws IOException {
+<span class="fc" id="L165">    return new AsciiGraphLoader&lt;&gt;(new GDLHandler.Builder()</span>
+<span class="fc" id="L166">      .setDefaultGraphLabel(GradoopConstants.DEFAULT_GRAPH_LABEL)</span>
+<span class="fc" id="L167">      .setDefaultVertexLabel(GradoopConstants.DEFAULT_VERTEX_LABEL)</span>
+<span class="fc" id="L168">      .setDefaultEdgeLabel(GradoopConstants.DEFAULT_EDGE_LABEL)</span>
+<span class="fc" id="L169">      .setErrorStrategy(new BailSyntaxErrorStrategy())</span>
+<span class="fc" id="L170">      .buildFromFile(fileName),</span>
+      elementFactoryProvider);
+  }
+
+  /**
+   * Creates an AsciiGraphLoader from the given ASCII GDL file.
+   *
+   * @param inputStream File that contains a GDL script
+   * @param elementFactoryProvider Factory provider for graph elements.
+   * @param &lt;G&gt; graph head type
+   * @param &lt;V&gt; vertex type
+   * @param &lt;E&gt; edge type
+   *
+   * @return AsciiGraphLoader
+   * @throws IOException on failure
+   */
+  public static
+  &lt;G extends GraphHead, V extends Vertex, E extends Edge&gt;
+  AsciiGraphLoader&lt;G, V, E&gt; fromStream(InputStream inputStream,
+                                       ElementFactoryProvider&lt;G, V, E&gt; elementFactoryProvider)
+    throws IOException {
+<span class="nc" id="L191">    return new AsciiGraphLoader&lt;&gt;(new GDLHandler.Builder()</span>
+<span class="nc" id="L192">      .setDefaultGraphLabel(GradoopConstants.DEFAULT_GRAPH_LABEL)</span>
+<span class="nc" id="L193">      .setDefaultVertexLabel(GradoopConstants.DEFAULT_VERTEX_LABEL)</span>
+<span class="nc" id="L194">      .setDefaultEdgeLabel(GradoopConstants.DEFAULT_EDGE_LABEL)</span>
+<span class="nc" id="L195">      .setErrorStrategy(new BailSyntaxErrorStrategy())</span>
+<span class="nc" id="L196">      .buildFromStream(inputStream),</span>
+      elementFactoryProvider);
+  }
+
+  /**
+   * Appends the given ASCII GDL to the graph handled by that loader.
+   *
+   * Variables that were previously used, can be reused in the given script and
+   * refer to the same entities.
+   *
+   * @param asciiGraph GDL string
+   */
+  public void appendFromString(String asciiGraph) {
+<span class="fc" id="L209">    this.gdlHandler.append(asciiGraph);</span>
+<span class="fc" id="L210">    init();</span>
+<span class="fc" id="L211">  }</span>
+
+  // ---------------------------------------------------------------------------
+  //  Graph methods
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Returns all GraphHeads contained in the ASCII graph.
+   *
+   * @return graphHeads
+   */
+  public Collection&lt;G&gt; getGraphHeads() {
+<span class="fc" id="L223">    return new ImmutableSet.Builder&lt;G&gt;()</span>
+<span class="fc" id="L224">      .addAll(graphHeads.values()).build();</span>
+  }
+
+  /**
+   * Returns GraphHead by given variable.
+   *
+   * @param variable variable used in GDL script
+   * @return graphHead or {@code null} if graph is not cached
+   */
+  public G getGraphHeadByVariable(String variable) {
+<span class="fc" id="L234">    return getGraphHeadCache().get(variable);</span>
+  }
+
+  /**
+   * Returns GraphHeads by their given variables.
+   *
+   * @param variables variables used in GDL script
+   * @return graphHeads that are assigned to the given variables
+   */
+  public Collection&lt;G&gt;  getGraphHeadsByVariables(String... variables) {
+<span class="fc" id="L244">    Collection&lt;G&gt;  result =</span>
+<span class="fc" id="L245">      Sets.newHashSetWithExpectedSize(variables.length);</span>
+<span class="fc bfc" id="L246" title="All 2 branches covered.">    for (String variable : variables) {</span>
+<span class="fc" id="L247">      G graphHead = getGraphHeadByVariable(variable);</span>
+<span class="pc bpc" id="L248" title="1 of 2 branches missed.">      if (graphHead != null) {</span>
+<span class="fc" id="L249">        result.add(graphHead);</span>
+      }
+    }
+<span class="fc" id="L252">    return result;</span>
+  }
+
+  // ---------------------------------------------------------------------------
+  //  Vertex methods
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Returns all vertices contained in the ASCII graph.
+   *
+   * @return vertices
+   */
+  public Collection&lt;V&gt; getVertices() {
+<span class="fc" id="L265">    return new ImmutableSet.Builder&lt;V&gt;().addAll(vertices.values()).build();</span>
+  }
+
+  /**
+   * Returns vertex by its given variable.
+   *
+   * @param variable variable used in GDL script
+   * @return vertex or {@code null} if not present
+   */
+  public V getVertexByVariable(String variable) {
+<span class="fc" id="L275">    return vertexCache.get(variable);</span>
+  }
+
+  /**
+   * Returns vertices by their given variables.
+   *
+   * @param variables variables used in GDL script
+   * @return vertices
+   */
+  public Collection&lt;V&gt; getVerticesByVariables(String... variables) {
+<span class="fc" id="L285">    Collection&lt;V&gt; result = Sets.newHashSetWithExpectedSize(variables.length);</span>
+<span class="fc bfc" id="L286" title="All 2 branches covered.">    for (String variable : variables) {</span>
+<span class="fc" id="L287">      V vertex = getVertexByVariable(variable);</span>
+<span class="pc bpc" id="L288" title="1 of 2 branches missed.">      if (vertex != null) {</span>
+<span class="fc" id="L289">        result.add(vertex);</span>
+      }
+    }
+<span class="fc" id="L292">    return result;</span>
+  }
+
+  /**
+   * Returns all vertices that belong to the given graphs.
+   *
+   * @param graphIds graph identifiers
+   * @return vertices that are contained in the graphs
+   */
+  public Collection&lt;V&gt; getVerticesByGraphIds(GradoopIdSet graphIds) {
+<span class="fc" id="L302">    Collection&lt;V&gt; result = Sets.newHashSetWithExpectedSize(graphIds.size());</span>
+<span class="fc bfc" id="L303" title="All 2 branches covered.">    for (V vertex : vertices.values()) {</span>
+<span class="fc bfc" id="L304" title="All 2 branches covered.">      if (vertex.getGraphIds().containsAny(graphIds)) {</span>
+<span class="fc" id="L305">        result.add(vertex);</span>
+      }
+<span class="fc" id="L307">    }</span>
+<span class="fc" id="L308">    return result;</span>
+  }
+
+  /**
+   * Returns all vertices that belong to the given graph variables.
+   *
+   * @param graphVariables graph variables used in the GDL script
+   * @return vertices that are contained in the graphs
+   */
+  public Collection&lt;V&gt; getVerticesByGraphVariables(String... graphVariables) {
+<span class="fc" id="L318">    GradoopIdSet graphIds = new GradoopIdSet();</span>
+<span class="fc bfc" id="L319" title="All 2 branches covered.">    for (G graphHead : getGraphHeadsByVariables(graphVariables)) {</span>
+<span class="fc" id="L320">      graphIds.add(graphHead.getId());</span>
+<span class="fc" id="L321">    }</span>
+<span class="fc" id="L322">    return getVerticesByGraphIds(graphIds);</span>
+  }
+
+  // ---------------------------------------------------------------------------
+  //  Edge methods
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Returns all edges contained in the ASCII graph.
+   *
+   * @return edges
+   */
+  public Collection&lt;E&gt; getEdges() {
+<span class="fc" id="L335">    return new ImmutableSet.Builder&lt;E&gt;().addAll(edges.values()).build();</span>
+  }
+
+  /**
+   * Returns edge by its given variable.
+   *
+   * @param variable variable used in GDL script
+   * @return edge or {@code null} if not present
+   */
+  public E getEdgeByVariable(String variable) {
+<span class="fc" id="L345">    return edgeCache.get(variable);</span>
+  }
+
+  /**
+   * Returns edges by their given variables.
+   *
+   * @param variables variables used in GDL script
+   * @return edges
+   */
+  public Collection&lt;E&gt; getEdgesByVariables(String... variables) {
+<span class="fc" id="L355">    Collection&lt;E&gt;  result = Sets.newHashSetWithExpectedSize(variables.length);</span>
+<span class="fc bfc" id="L356" title="All 2 branches covered.">    for (String variable : variables) {</span>
+<span class="fc" id="L357">      E edge = edgeCache.get(variable);</span>
+<span class="pc bpc" id="L358" title="1 of 2 branches missed.">      if (edge != null) {</span>
+<span class="fc" id="L359">        result.add(edge);</span>
+      }
+    }
+<span class="fc" id="L362">    return result;</span>
+  }
+
+  /**
+   * Returns all edges that belong to the given graphs.
+   *
+   * @param graphIds Graph identifiers
+   * @return edges
+   */
+  public Collection&lt;E&gt;  getEdgesByGraphIds(GradoopIdSet graphIds) {
+<span class="fc" id="L372">    Collection&lt;E&gt;  result = Sets.newHashSetWithExpectedSize(graphIds.size());</span>
+<span class="fc bfc" id="L373" title="All 2 branches covered.">    for (E edge : edges.values()) {</span>
+<span class="fc bfc" id="L374" title="All 2 branches covered.">      if (edge.getGraphIds().containsAny(graphIds)) {</span>
+<span class="fc" id="L375">        result.add(edge);</span>
+      }
+<span class="fc" id="L377">    }</span>
+<span class="fc" id="L378">    return result;</span>
+  }
+
+  /**
+   * Returns all edges that belong to the given graph variables.
+   *
+   * @param variables graph variables used in the GDL script
+   * @return edges
+   */
+  public Collection&lt;E&gt;  getEdgesByGraphVariables(String... variables) {
+<span class="fc" id="L388">    GradoopIdSet graphIds = new GradoopIdSet();</span>
+<span class="fc bfc" id="L389" title="All 2 branches covered.">    for (G graphHead : getGraphHeadsByVariables(variables)) {</span>
+<span class="fc" id="L390">      graphIds.add(graphHead.getId());</span>
+<span class="fc" id="L391">    }</span>
+<span class="fc" id="L392">    return getEdgesByGraphIds(graphIds);</span>
+  }
+
+  // ---------------------------------------------------------------------------
+  //  Caches
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Returns all graph heads that are bound to a variable in the GDL script.
+   *
+   * @return variable to graphHead mapping
+   */
+  public Map&lt;String, G&gt; getGraphHeadCache() {
+<span class="fc" id="L405">    return new ImmutableMap.Builder&lt;String, G&gt;().putAll(graphHeadCache)</span>
+<span class="fc" id="L406">      .build();</span>
+  }
+
+  /**
+   * Returns all vertices that are bound to a variable in the GDL script.
+   *
+   * @return variable to vertex mapping
+   */
+  public Map&lt;String, V&gt; getVertexCache() {
+<span class="fc" id="L415">    return new ImmutableMap.Builder&lt;String, V&gt;().putAll(vertexCache).build();</span>
+  }
+
+  /**
+   * Returns all edges that are bound to a variable in the GDL script.
+   *
+   * @return variable to edge mapping
+   */
+  public Map&lt;String, E&gt; getEdgeCache() {
+<span class="fc" id="L424">    return new ImmutableMap.Builder&lt;String, E&gt;().putAll(edgeCache).build();</span>
+  }
+
+  // ---------------------------------------------------------------------------
+  //  Private init methods
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Initializes the AsciiGraphLoader
+   */
+  private void init() {
+<span class="fc" id="L435">    initGraphHeads();</span>
+<span class="fc" id="L436">    initVertices();</span>
+<span class="fc" id="L437">    initEdges();</span>
+<span class="fc" id="L438">  }</span>
+
+  /**
+   * Initializes GraphHeads and their cache.
+   */
+  private void initGraphHeads() {
+<span class="fc bfc" id="L444" title="All 2 branches covered.">    for (Graph g : gdlHandler.getGraphs()) {</span>
+<span class="fc bfc" id="L445" title="All 2 branches covered.">      if (!graphHeadIds.containsKey(g.getId())) {</span>
+<span class="fc" id="L446">        initGraphHead(g);</span>
+      }
+<span class="fc" id="L448">    }</span>
+
+<span class="fc bfc" id="L450" title="All 2 branches covered.">    for (Map.Entry&lt;String, Graph&gt; e : gdlHandler.getGraphCache().entrySet()) {</span>
+<span class="fc" id="L451">      updateGraphCache(e.getKey(), e.getValue());</span>
+<span class="fc" id="L452">    }</span>
+<span class="fc" id="L453">  }</span>
+
+  /**
+   * Initializes vertices and their cache.
+   */
+  private void initVertices() {
+<span class="fc bfc" id="L459" title="All 2 branches covered.">    for (org.gradoop.gdl.model.Vertex v : gdlHandler.getVertices()) {</span>
+<span class="fc" id="L460">      initVertex(v);</span>
+<span class="fc" id="L461">    }</span>
+
+<span class="fc bfc" id="L463" title="All 2 branches covered.">    for (Map.Entry&lt;String, org.gradoop.gdl.model.Vertex&gt; e : gdlHandler.getVertexCache().entrySet()) {</span>
+<span class="fc" id="L464">      updateVertexCache(e.getKey(), e.getValue());</span>
+<span class="fc" id="L465">    }</span>
+<span class="fc" id="L466">  }</span>
+
+  /**
+   * Initializes edges and their cache.
+   */
+  private void initEdges() {
+<span class="fc bfc" id="L472" title="All 2 branches covered.">    for (org.gradoop.gdl.model.Edge e : gdlHandler.getEdges()) {</span>
+<span class="fc" id="L473">      initEdge(e);</span>
+<span class="fc" id="L474">    }</span>
+
+<span class="fc bfc" id="L476" title="All 2 branches covered.">    for (Map.Entry&lt;String, org.gradoop.gdl.model.Edge&gt; e : gdlHandler.getEdgeCache().entrySet()) {</span>
+<span class="fc" id="L477">      updateEdgeCache(e.getKey(), e.getValue());</span>
+<span class="fc" id="L478">    }</span>
+<span class="fc" id="L479">  }</span>
+
+  /**
+   * Creates a new Graph from the GDL Loader.
+   *
+   * @param g graph from GDL Loader
+   * @return graph head
+   */
+  private G initGraphHead(Graph g) {
+<span class="fc" id="L488">    G graphHead = elementFactoryProvider.getGraphHeadFactory().createGraphHead(</span>
+<span class="fc" id="L489">      g.getLabel(), Properties.createFromMap(g.getProperties()));</span>
+<span class="fc" id="L490">    graphHeadIds.put(g.getId(), graphHead.getId());</span>
+<span class="fc" id="L491">    graphHeads.put(graphHead.getId(), graphHead);</span>
+<span class="fc" id="L492">    return graphHead;</span>
+  }
+
+  /**
+   * Creates a new Vertex from the GDL Loader or updates an existing one.
+   *
+   * @param v vertex from GDL Loader
+   * @return vertex
+   */
+  private V initVertex(org.gradoop.gdl.model.Vertex v) {
+    V vertex;
+<span class="fc bfc" id="L503" title="All 2 branches covered.">    if (!vertexIds.containsKey(v.getId())) {</span>
+<span class="fc" id="L504">      vertex = elementFactoryProvider.getVertexFactory().createVertex(</span>
+<span class="fc" id="L505">        v.getLabel(),</span>
+<span class="fc" id="L506">        Properties.createFromMap(v.getProperties()),</span>
+<span class="fc" id="L507">        createGradoopIdSet(v));</span>
+<span class="fc" id="L508">      vertexIds.put(v.getId(), vertex.getId());</span>
+<span class="fc" id="L509">      vertices.put(vertex.getId(), vertex);</span>
+    } else {
+<span class="fc" id="L511">      vertex = vertices.get(vertexIds.get(v.getId()));</span>
+<span class="fc" id="L512">      vertex.setGraphIds(createGradoopIdSet(v));</span>
+    }
+<span class="fc" id="L514">    return vertex;</span>
+  }
+
+  /**
+   * Creates a new Edge from the GDL Loader.
+   *
+   * @param e edge from GDL loader
+   * @return edge
+   */
+  private E initEdge(org.gradoop.gdl.model.Edge e) {
+    E edge;
+<span class="fc bfc" id="L525" title="All 2 branches covered.">    if (!edgeIds.containsKey(e.getId())) {</span>
+<span class="fc" id="L526">      edge = elementFactoryProvider.getEdgeFactory().createEdge(</span>
+<span class="fc" id="L527">        e.getLabel(),</span>
+<span class="fc" id="L528">        vertexIds.get(e.getSourceVertexId()),</span>
+<span class="fc" id="L529">        vertexIds.get(e.getTargetVertexId()),</span>
+<span class="fc" id="L530">        Properties.createFromMap(e.getProperties()),</span>
+<span class="fc" id="L531">        createGradoopIdSet(e));</span>
+<span class="fc" id="L532">      edgeIds.put(e.getId(), edge.getId());</span>
+<span class="fc" id="L533">      edges.put(edge.getId(), edge);</span>
+    } else {
+<span class="fc" id="L535">      edge = edges.get(edgeIds.get(e.getId()));</span>
+<span class="fc" id="L536">      edge.setGraphIds(createGradoopIdSet(e));</span>
+    }
+<span class="fc" id="L538">    return edge;</span>
+  }
+
+  /**
+   * Updates the graph cache.
+   *
+   * @param variable graph variable used in GDL script
+   * @param g graph from GDL loader
+   */
+  private void updateGraphCache(String variable, Graph g) {
+<span class="fc" id="L548">    graphHeadCache.put(</span>
+<span class="fc" id="L549">      variable, graphHeads.get(graphHeadIds.get(g.getId())));</span>
+<span class="fc" id="L550">  }</span>
+
+  /**
+   * Updates the vertex cache.
+   *
+   * @param variable vertex variable used in GDL script
+   * @param v vertex from GDL loader
+   */
+  private void updateVertexCache(String variable, org.gradoop.gdl.model.Vertex v) {
+<span class="fc" id="L559">    vertexCache.put(variable, vertices.get(vertexIds.get(v.getId())));</span>
+<span class="fc" id="L560">  }</span>
+
+  /**
+   * Updates the edge cache.
+   *
+   * @param variable edge variable used in the GDL script
+   * @param e edge from GDL loader
+   */
+  private void updateEdgeCache(String variable, org.gradoop.gdl.model.Edge e) {
+<span class="fc" id="L569">    edgeCache.put(variable, edges.get(edgeIds.get(e.getId())));</span>
+<span class="fc" id="L570">  }</span>
+
+  /**
+   * Creates a {@code GradoopIDSet} from the long identifiers stored at the
+   * given graph element.
+   *
+   * @param e graph element
+   * @return GradoopIDSet for the given element
+   */
+  private GradoopIdSet createGradoopIdSet(GraphElement e) {
+<span class="fc" id="L580">    GradoopIdSet result = new GradoopIdSet();</span>
+<span class="fc bfc" id="L581" title="All 2 branches covered.">    for (Long graphId : e.getGraphs()) {</span>
+<span class="fc" id="L582">      result.add(graphHeadIds.get(graphId));</span>
+<span class="fc" id="L583">    }</span>
+<span class="fc" id="L584">    return result;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

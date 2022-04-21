@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MapStrategy.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Gradoop Common</a> &gt; <a href="index.source.html" class="el_package">org.gradoop.common.model.impl.properties.strategies</a> &gt; <span class="el_source">MapStrategy.java</span></div><h1>MapStrategy.java</h1><pre class="source lang-java linenums">/*
+ * Copyright © 2014 - 2021 Leipzig University (Database Research Group)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradoop.common.model.impl.properties.strategies;
+
+import org.apache.flink.core.memory.DataInputView;
+import org.apache.flink.core.memory.DataInputViewStreamWrapper;
+import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
+import org.gradoop.common.model.impl.properties.PropertyValue;
+import org.gradoop.common.model.impl.properties.Type;
+
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Strategy class for handling {@code PropertyValue} operations with a value of the type
+ * {@code Map}.
+ */
+<span class="fc" id="L34">public class MapStrategy</span>
+  extends AbstractVariableSizedPropertyValueStrategy&lt;Map&lt;PropertyValue, PropertyValue&gt;&gt; {
+
+  @Override
+  public Map&lt;PropertyValue, PropertyValue&gt; read(DataInputView inputView, byte typeByte)
+      throws IOException {
+<span class="fc" id="L40">    byte[] rawBytes = readVariableSizedData(inputView, typeByte);</span>
+<span class="fc" id="L41">    DataInputViewStreamWrapper internalInputView = createInputView(rawBytes);</span>
+<span class="fc" id="L42">    return createMap(internalInputView);</span>
+  }
+
+  @Override
+  public int compare(Map value, Object other) {
+<span class="fc" id="L47">    throw new UnsupportedOperationException(&quot;Method compare() is not supported for Map.&quot;);</span>
+  }
+
+  @Override
+  public boolean is(Object value) {
+<span class="fc bfc" id="L52" title="All 2 branches covered.">    if (!(value instanceof Map)) {</span>
+<span class="fc" id="L53">      return false;</span>
+    }
+<span class="fc bfc" id="L55" title="All 2 branches covered.">    for (Map.Entry&lt;?, ?&gt; entry : ((Map&lt;?, ?&gt;) value).entrySet()) {</span>
+      // Map is not a valid property value if it contains any object
+      // that is not a property value itself.
+<span class="fc bfc" id="L58" title="All 2 branches covered.">      if (!(entry.getKey() instanceof PropertyValue) ||</span>
+<span class="pc bpc" id="L59" title="1 of 2 branches missed.">        !(entry.getValue() instanceof PropertyValue)) {</span>
+<span class="fc" id="L60">        return false;</span>
+      }
+<span class="fc" id="L62">    }</span>
+
+<span class="fc" id="L64">    return true;</span>
+  }
+
+  @Override
+  public Class&lt;Map&lt;PropertyValue, PropertyValue&gt;&gt; getType() {
+<span class="fc" id="L69">    return (Class) Map.class;</span>
+  }
+
+  /**
+   * {@inheritDoc}
+   * @throws IOException if converting the byte array to a Map fails.
+   */
+  @Override
+  public Map&lt;PropertyValue, PropertyValue&gt; get(byte[] bytes) throws IOException {
+<span class="fc" id="L78">    DataInputViewStreamWrapper inputView = createInputView(bytes);</span>
+    Map&lt;PropertyValue, PropertyValue&gt; map;
+
+    try {
+<span class="pc bpc" id="L82" title="1 of 2 branches missed.">      if (inputView.skipBytes(PropertyValue.OFFSET) != PropertyValue.OFFSET) {</span>
+<span class="nc" id="L83">        throw new IOException(&quot;Malformed entry in PropertyValue Map.&quot;);</span>
+      }
+<span class="fc" id="L85">      map = createMap(inputView);</span>
+<span class="nc" id="L86">    } catch (IOException e) {</span>
+<span class="nc" id="L87">      throw new IOException(&quot;Error while processing DataInputViewStreamWrapper.&quot;);</span>
+<span class="fc" id="L88">    }</span>
+
+<span class="fc" id="L90">    return map;</span>
+  }
+
+  @Override
+  public byte getRawType() {
+<span class="fc" id="L95">    return Type.MAP.getTypeByte();</span>
+  }
+
+  /**
+   * {@inheritDoc}
+   * @throws IOException if converting the value to a byte array fails.
+   */
+  @Override
+  public byte[] getRawBytes(Map&lt;PropertyValue, PropertyValue&gt; value) throws IOException {
+<span class="fc" id="L104">    int size = value.keySet().stream().mapToInt(PropertyValue::byteSize).sum() +</span>
+<span class="fc" id="L105">        value.values().stream().mapToInt(PropertyValue::byteSize).sum() +</span>
+        PropertyValue.OFFSET;
+
+<span class="fc" id="L108">    try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream(size);</span>
+<span class="fc" id="L109">        DataOutputStream outputStream = new DataOutputStream(byteStream);</span>
+<span class="fc" id="L110">        DataOutputViewStreamWrapper outputView = new DataOutputViewStreamWrapper(outputStream)) {</span>
+
+<span class="fc" id="L112">      outputStream.write(Type.MAP.getTypeByte());</span>
+<span class="fc bfc" id="L113" title="All 2 branches covered.">      for (Map.Entry&lt;PropertyValue, PropertyValue&gt; entry : value.entrySet()) {</span>
+<span class="fc" id="L114">        entry.getKey().write(outputView);</span>
+<span class="fc" id="L115">        entry.getValue().write(outputView);</span>
+<span class="fc" id="L116">      }</span>
+
+<span class="fc" id="L118">      return byteStream.toByteArray();</span>
+<span class="nc" id="L119">    } catch (IOException e) {</span>
+<span class="nc" id="L120">      throw new IOException(&quot;Error writing PropertyValue with MapStrategy.&quot;, e);</span>
+    }
+  }
+
+  /**
+   * Creates a map with data read from an {@link DataInputViewStreamWrapper}.
+   *
+   * @param inputView {@link DataInputViewStreamWrapper} containing data
+   * @return a map containing the deserialized data
+   * @throws IOException on failure to read input view
+   */
+  private Map&lt;PropertyValue, PropertyValue&gt; createMap(DataInputViewStreamWrapper inputView)
+    throws IOException {
+    PropertyValue key;
+    PropertyValue value;
+
+<span class="fc" id="L136">    Map&lt;PropertyValue, PropertyValue&gt; map = new HashMap&lt;&gt;();</span>
+
+    try {
+<span class="fc bfc" id="L139" title="All 2 branches covered.">      while (inputView.available() &gt; 0) {</span>
+<span class="fc" id="L140">        key = new PropertyValue();</span>
+<span class="fc" id="L141">        key.read(inputView);</span>
+
+<span class="fc" id="L143">        value = new PropertyValue();</span>
+<span class="fc" id="L144">        value.read(inputView);</span>
+
+<span class="fc" id="L146">        map.put(key, value);</span>
+      }
+<span class="nc" id="L148">    } catch (IOException e) {</span>
+<span class="nc" id="L149">      throw new IOException(&quot;Error reading PropertyValue with MapStrategy.&quot;, e);</span>
+<span class="fc" id="L150">    }</span>
+<span class="fc" id="L151">    return map;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

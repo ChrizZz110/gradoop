@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LogicalGraph.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Gradoop Flink</a> &gt; <a href="index.source.html" class="el_package">org.gradoop.flink.model.impl.epgm</a> &gt; <span class="el_source">LogicalGraph.java</span></div><h1>LogicalGraph.java</h1><pre class="source lang-java linenums">/*
+ * Copyright © 2014 - 2021 Leipzig University (Database Research Group)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradoop.flink.model.impl.epgm;
+
+import org.apache.flink.api.java.DataSet;
+import org.gradoop.common.model.impl.pojo.EPGMEdge;
+import org.gradoop.common.model.impl.pojo.EPGMGraphHead;
+import org.gradoop.common.model.impl.pojo.EPGMVertex;
+import org.gradoop.flink.io.api.DataSink;
+import org.gradoop.flink.io.impl.gdl.GDLConsoleOutput;
+import org.gradoop.flink.model.api.epgm.BaseGraph;
+import org.gradoop.flink.model.api.epgm.BaseGraphCollectionFactory;
+import org.gradoop.flink.model.api.epgm.BaseGraphFactory;
+import org.gradoop.flink.model.api.epgm.LogicalGraphOperators;
+import org.gradoop.flink.model.api.functions.AggregateFunction;
+import org.gradoop.flink.model.api.layouts.LogicalGraphLayout;
+import org.gradoop.flink.model.api.operators.BinaryBaseGraphToValueOperator;
+import org.gradoop.flink.model.api.operators.GraphsToGraphOperator;
+import org.gradoop.flink.model.api.operators.UnaryBaseGraphToValueOperator;
+import org.gradoop.flink.model.impl.operators.rollup.EdgeRollUp;
+import org.gradoop.flink.model.impl.operators.rollup.VertexRollUp;
+import org.gradoop.flink.util.GradoopFlinkConfig;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Objects;
+
+/**
+ * A logical graph is one of the base concepts of the Extended Property Graph Model. A logical graph
+ * encapsulates three concepts:
+ * &lt;ul&gt;
+ * &lt;li&gt;a graph head, that stores information about the graph (i.e. label and properties)&lt;/li&gt;
+ * &lt;li&gt;a set of vertices assigned to the graph&lt;/li&gt;
+ * &lt;li&gt;a set of directed, possibly parallel edges assigned to the graph&lt;/li&gt;
+ * &lt;/ul&gt;
+ * Furthermore, a logical graph provides operations that are performed on the underlying data. These
+ * operations result in either another logical graph or in a {@link GraphCollection}.
+ * &lt;p&gt;
+ * A logical graph is wrapping a {@link LogicalGraphLayout} which defines, how the graph is
+ * represented in Apache Flink. Note that the LogicalGraph also implements that interface and
+ * just forward the calls to the layout. This is just for convenience and API synchronicity.
+ */
+public class LogicalGraph implements
+  BaseGraph&lt;EPGMGraphHead, EPGMVertex, EPGMEdge, LogicalGraph, GraphCollection&gt;, LogicalGraphOperators {
+  /**
+   * Layout for that logical graph.
+   */
+  private final LogicalGraphLayout&lt;EPGMGraphHead, EPGMVertex, EPGMEdge&gt; layout;
+  /**
+   * Configuration
+   */
+  private final GradoopFlinkConfig config;
+
+  /**
+   * Creates a new logical graph based on the given parameters.
+   *
+   * @param layout representation of the logical graph
+   * @param config the Gradoop Flink configuration
+   */
+  LogicalGraph(LogicalGraphLayout&lt;EPGMGraphHead, EPGMVertex, EPGMEdge&gt; layout,
+<span class="fc" id="L74">    GradoopFlinkConfig config) {</span>
+<span class="fc" id="L75">    Objects.requireNonNull(layout);</span>
+<span class="fc" id="L76">    Objects.requireNonNull(config);</span>
+<span class="fc" id="L77">    this.layout = layout;</span>
+<span class="fc" id="L78">    this.config = config;</span>
+<span class="fc" id="L79">  }</span>
+
+  //----------------------------------------------------------------------------
+  // Data methods
+  //----------------------------------------------------------------------------
+
+  @Override
+  public GradoopFlinkConfig getConfig() {
+<span class="fc" id="L87">    return config;</span>
+  }
+
+  @Override
+  public BaseGraphFactory&lt;
+    EPGMGraphHead, EPGMVertex, EPGMEdge, LogicalGraph, GraphCollection&gt; getFactory() {
+<span class="fc" id="L93">    return config.getLogicalGraphFactory();</span>
+  }
+
+  @Override
+  public BaseGraphCollectionFactory&lt;
+    EPGMGraphHead, EPGMVertex, EPGMEdge, LogicalGraph, GraphCollection&gt; getCollectionFactory() {
+<span class="fc" id="L99">    return config.getGraphCollectionFactory();</span>
+  }
+
+  @Override
+  public boolean isGVELayout() {
+<span class="nc" id="L104">    return layout.isGVELayout();</span>
+  }
+
+  @Override
+  public boolean isIndexedGVELayout() {
+<span class="nc" id="L109">    return layout.isIndexedGVELayout();</span>
+  }
+
+  @Override
+  public DataSet&lt;EPGMGraphHead&gt; getGraphHead() {
+<span class="fc" id="L114">    return layout.getGraphHead();</span>
+  }
+
+  @Override
+  public DataSet&lt;EPGMVertex&gt; getVertices() {
+<span class="fc" id="L119">    return layout.getVertices();</span>
+  }
+
+  @Override
+  public DataSet&lt;EPGMVertex&gt; getVerticesByLabel(String label) {
+<span class="fc" id="L124">    return layout.getVerticesByLabel(label);</span>
+  }
+
+  @Override
+  public DataSet&lt;EPGMEdge&gt; getEdges() {
+<span class="fc" id="L129">    return layout.getEdges();</span>
+  }
+
+  @Override
+  public DataSet&lt;EPGMEdge&gt; getEdgesByLabel(String label) {
+<span class="fc" id="L134">    return layout.getEdgesByLabel(label);</span>
+  }
+
+  //----------------------------------------------------------------------------
+  // Unary Operators
+  //----------------------------------------------------------------------------
+
+  @Override
+  public GraphCollection groupVerticesByRollUp(
+    List&lt;String&gt; vertexGroupingKeys, List&lt;AggregateFunction&gt; vertexAggregateFunctions,
+    List&lt;String&gt; edgeGroupingKeys, List&lt;AggregateFunction&gt; edgeAggregateFunctions) {
+<span class="pc bpc" id="L145" title="2 of 4 branches missed.">    if (vertexGroupingKeys == null || vertexGroupingKeys.isEmpty()) {</span>
+<span class="nc" id="L146">      throw new IllegalArgumentException(&quot;Missing vertex grouping key(s).&quot;);</span>
+    }
+
+<span class="fc" id="L149">    return callForCollection(new VertexRollUp(vertexGroupingKeys, vertexAggregateFunctions,</span>
+      edgeGroupingKeys, edgeAggregateFunctions));
+  }
+
+  @Override
+  public GraphCollection groupEdgesByRollUp(
+    List&lt;String&gt; vertexGroupingKeys, List&lt;AggregateFunction&gt; vertexAggregateFunctions,
+    List&lt;String&gt; edgeGroupingKeys, List&lt;AggregateFunction&gt; edgeAggregateFunctions) {
+<span class="pc bpc" id="L157" title="2 of 4 branches missed.">    if (edgeGroupingKeys == null || edgeGroupingKeys.isEmpty()) {</span>
+<span class="nc" id="L158">      throw new IllegalArgumentException(&quot;Missing edge grouping key(s).&quot;);</span>
+    }
+
+<span class="fc" id="L161">    return callForCollection(new EdgeRollUp(vertexGroupingKeys, vertexAggregateFunctions,</span>
+      edgeGroupingKeys, edgeAggregateFunctions));
+  }
+
+  //----------------------------------------------------------------------------
+  // Auxiliary Operators
+  //----------------------------------------------------------------------------
+
+  @Override
+  public &lt;T&gt; T callForValue(UnaryBaseGraphToValueOperator&lt;LogicalGraph, T&gt; operator) {
+<span class="fc" id="L171">    return operator.execute(this);</span>
+  }
+
+  @Override
+  public &lt;T&gt; T callForValue(BinaryBaseGraphToValueOperator&lt;LogicalGraph, T&gt; operator,
+                            LogicalGraph otherGraph) {
+<span class="fc" id="L177">    return operator.execute(this, otherGraph);</span>
+  }
+
+  @Override
+  public LogicalGraph callForGraph(GraphsToGraphOperator operator,
+    LogicalGraph... otherGraphs) {
+<span class="nc" id="L183">    return operator.execute(this, otherGraphs);</span>
+  }
+
+  //----------------------------------------------------------------------------
+  // Utility methods
+  //----------------------------------------------------------------------------
+
+  @Override
+  public void writeTo(DataSink dataSink) throws IOException {
+<span class="fc" id="L192">    dataSink.write(this);</span>
+<span class="fc" id="L193">  }</span>
+
+  @Override
+  public void writeTo(DataSink dataSink, boolean overWrite) throws IOException {
+<span class="nc" id="L197">    dataSink.write(this, overWrite);</span>
+<span class="nc" id="L198">  }</span>
+
+  /**
+   * Prints the GDL formatted graph to the standard output.
+   *
+   * @throws Exception forwarded from dataset print
+   */
+  public void print() throws Exception {
+<span class="nc" id="L206">    GDLConsoleOutput.print(this);</span>
+<span class="nc" id="L207">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

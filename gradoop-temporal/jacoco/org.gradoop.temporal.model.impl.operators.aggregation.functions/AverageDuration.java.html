@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AverageDuration.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Gradoop Temporal</a> &gt; <a href="index.source.html" class="el_package">org.gradoop.temporal.model.impl.operators.aggregation.functions</a> &gt; <span class="el_source">AverageDuration.java</span></div><h1>AverageDuration.java</h1><pre class="source lang-java linenums">/*
+ * Copyright © 2014 - 2021 Leipzig University (Database Research Group)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradoop.temporal.model.impl.operators.aggregation.functions;
+
+import org.gradoop.common.exceptions.UnsupportedTypeException;
+import org.gradoop.common.model.impl.properties.PropertyValue;
+import org.gradoop.common.model.impl.properties.Type;
+import org.gradoop.flink.model.impl.operators.aggregation.functions.average.Average;
+import org.gradoop.temporal.model.api.functions.TemporalAggregateFunction;
+import org.gradoop.temporal.model.api.TimeDimension;
+import org.gradoop.temporal.model.impl.pojo.TemporalElement;
+
+import java.time.temporal.TemporalUnit;
+import java.util.Arrays;
+
+/**
+ * Calculate the average duration of a time dimension of one given {@link TimeDimension} of temporal elements.
+ * Time intervals with either the start or end time set to the respective default value will be ignored.
+ */
+public class AverageDuration extends AbstractDurationAggregateFunction
+  implements Average, TemporalAggregateFunction {
+
+  /**
+   * A property value containing the number {@code 1}, as a {@link Long}.
+   */
+<span class="fc" id="L39">  private static final PropertyValue ONE = PropertyValue.create(1L);</span>
+
+  /**
+   * Creates a new instance of this aggregate function.
+   *
+   * @param aggregatePropertyKey the property key of the new property where the aggregated value is stored
+   * @param dimension the time dimension to consider
+   * @param unit the temporal unit into which the result is converted. The supported units are specified in
+   *             {@link AbstractDurationAggregateFunction#SUPPORTED_UNITS}.
+   */
+  public AverageDuration(String aggregatePropertyKey, TimeDimension dimension, TemporalUnit unit) {
+<span class="fc" id="L50">    super(aggregatePropertyKey, dimension, unit);</span>
+<span class="fc" id="L51">  }</span>
+
+  /**
+   * Create an instance of the {@link AverageDuration} aggregate function.
+   *
+   * @param aggregatePropertyKey the property key of the new property where the aggregated value is stored
+   * @param dimension the time dimension to consider
+   */
+  public AverageDuration(String aggregatePropertyKey, TimeDimension dimension) {
+<span class="fc" id="L60">    this(aggregatePropertyKey, dimension, AbstractDurationAggregateFunction.DEFAULT_UNIT);</span>
+<span class="fc" id="L61">  }</span>
+
+  /**
+   * Creates a new instance of this aggregate function. The the property key of the new property, where the
+   * aggregated value is stored, will be defined as &quot;avgDuration_&quot; + {dimension} + &quot;_&quot; + {unit}. Use
+   * constructor {@link AverageDuration#AverageDuration(String, TimeDimension, TemporalUnit)} to specify a
+   * user-defined key.
+   *
+   * @param dimension the time dimension to consider
+   * @param unit the temporal unit into which the result is converted. The supported units are specified in
+   *             {@link AbstractDurationAggregateFunction#SUPPORTED_UNITS}.
+   */
+  public AverageDuration(TimeDimension dimension, TemporalUnit unit) {
+<span class="fc" id="L74">    this(&quot;avgDuration_&quot; + dimension + &quot;_&quot; + unit, dimension, unit);</span>
+<span class="fc" id="L75">  }</span>
+
+  /**
+   * Get the duration of a time dimension as the aggregate value from a temporal element.
+   * The duration will be returned in a format used by the {@link Average} aggregation.
+   * The increment will be ignored, if the start of the end time of the time dimension is set
+   * to a default value.
+   *
+   * @param element The temporal element.
+   * @return The duration of the time dimension, in the internal representation used by {@link Average}.
+   */
+  @Override
+  public PropertyValue getIncrement(TemporalElement element) {
+<span class="fc" id="L88">    PropertyValue duration = getDuration(element);</span>
+<span class="fc bfc" id="L89" title="All 2 branches covered.">    if (duration.getLong() == -1L) {</span>
+<span class="fc" id="L90">      return Average.IGNORED_VALUE;</span>
+    }
+<span class="fc" id="L92">    return PropertyValue.create(Arrays.asList(duration, ONE));</span>
+  }
+
+  /**
+   * After calling {@link Average#postAggregate(PropertyValue)}, this function transforms the resulting
+   * aggregate value to the specified temporal unit.
+   *
+   * @param result the result of the AverageDuration aggregation as {@link Double} in milliseconds, or null if
+   *              nothing was aggregated.
+   * @return By default (no time unit or the default unit [millis] is specified), the result of the
+   *         AverageDuration aggregation as {@link Double} in milliseconds is returned. If a different
+   *         temporal unit is given in {@link AbstractDurationAggregateFunction#timeUnit}, a {@link Double} of
+   *         the desired unit is returned.
+   * @throws UnsupportedTypeException if the type of the given property value is different from {@link Double}
+   *                                  or null.
+   * @see Average#postAggregate(PropertyValue)
+   */
+  @Override
+  public PropertyValue postAggregate(PropertyValue result) throws UnsupportedTypeException {
+    // First call the postAggregate of the interface to calculate the average aggregate
+<span class="fc" id="L112">    result = Average.super.postAggregate(result);</span>
+    // Check if the aggregate value is of type null or double.
+<span class="pc bpc" id="L114" title="2 of 4 branches missed.">    if (!result.isNull() &amp;&amp; !result.isDouble()) {</span>
+<span class="nc" id="L115">      throw new UnsupportedTypeException(&quot;The result type of the average duration aggregation must be &quot; +</span>
+<span class="nc" id="L116">        &quot;one of [&quot; + Type.NULL + &quot;, &quot; + Type.DOUBLE + &quot;], but is [&quot; + result.getType() + &quot;].&quot;);</span>
+    }
+<span class="pc bpc" id="L118" title="1 of 4 branches missed.">    if (timeUnit != AbstractDurationAggregateFunction.DEFAULT_UNIT &amp;&amp; result.isDouble()) {</span>
+      // It is not a default unit, so we have to map the result value to the desired unit.
+<span class="fc" id="L120">      result.setDouble(result.getDouble() / timeUnit.getDuration().toMillis());</span>
+    }
+<span class="fc" id="L122">    return result;</span>
+  }
+
+  @Override
+  public String toString() {
+<span class="nc" id="L127">    return String.format(&quot;%s(%s)&quot;, getClass().getSimpleName(), dimension);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>
