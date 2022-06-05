@@ -339,8 +339,8 @@ Gradoop Flink,org.gradoop.flink.model.impl.operators.statistics,AverageIncomingD
 Gradoop Flink,org.gradoop.flink.model.impl.operators.statistics,DegreeCentralityBase,0,3,0,0,0,1,0,1,0,1
 Gradoop Flink,org.gradoop.flink.model.impl.operators.statistics,EdgeLabelDistribution,0,12,0,0,0,2,0,2,0,2
 Gradoop Flink,org.gradoop.flink.model.impl.operators.statistics,IncomingVertexDegrees,0,37,0,0,0,5,0,2,0,2
-Gradoop Flink,org.gradoop.flink.model.impl.operators.statistics,ConnectedComponentsDistribution,18,64,0,2,6,10,3,3,3,2
 Gradoop Flink,org.gradoop.flink.model.impl.operators.statistics,SourceLabelAndEdgeLabelDistribution,0,40,0,0,0,7,0,2,0,2
+Gradoop Flink,org.gradoop.flink.model.impl.operators.statistics,ConnectedComponentsDistribution,18,64,0,2,6,10,3,3,3,2
 Gradoop Flink,org.gradoop.flink.model.impl.operators.statistics,DistinctEdgePropertiesByLabel,0,10,0,0,0,2,0,2,0,2
 Gradoop Flink,org.gradoop.flink.model.impl.operators.statistics,OutgoingVertexDegrees,0,37,0,0,0,5,0,2,0,2
 Gradoop Flink,org.gradoop.flink.model.impl.operators.statistics,DistinctTargetIds,0,12,0,0,0,5,0,2,0,2
