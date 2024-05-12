@@ -25,7 +25,7 @@ under the License.
     <language>en-us</language>
     <copyright>&#169;2014 - 2021 - 2024 University of Leipzig</copyright>
     <item>
-      <title>File: 366,
+      <title>File: 373,
              Errors: 0,
              Warnings: 0,
              Infos: 0
@@ -397,6 +397,20 @@ under the License.
                           <tr>
                 <td>
                   <a href="http://www.gradoop.org/checkstyle.html#org.gradoop.temporal.model.impl.operators.verify.VerifyAndUpdateEdgeValidityTest.java">org/gradoop/temporal/model/impl/operators/verify/VerifyAndUpdateEdgeValidityTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://www.gradoop.org/checkstyle.html#org.gradoop.flink.io.impl.parquet.PlainParquetTest.java">org/gradoop/flink/io/impl/parquet/PlainParquetTest.java</a>
                 </td>
                 <td>
                   0
@@ -859,6 +873,34 @@ under the License.
                           <tr>
                 <td>
                   <a href="http://www.gradoop.org/checkstyle.html#org.gradoop.temporal.model.impl.operators.matching.single.cypher.testdata.homomorphism.HomomorphismEqualsTest.java">org/gradoop/temporal/model/impl/operators/matching/single/cypher/testdata/homomorphism/HomomorphismEqualsTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://www.gradoop.org/checkstyle.html#org.gradoop.temporal.model.impl.operators.metric.VertexCentricAverageDegreeEvolutionTest.java">org/gradoop/temporal/model/impl/operators/metric/VertexCentricAverageDegreeEvolutionTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://www.gradoop.org/checkstyle.html#org.gradoop.flink.io.impl.parquet.ProtobufParquetTest.java">org/gradoop/flink/io/impl/parquet/ProtobufParquetTest.java</a>
                 </td>
                 <td>
                   0
@@ -3112,6 +3154,20 @@ under the License.
               </tr>
                           <tr>
                 <td>
+                  <a href="http://www.gradoop.org/checkstyle.html#org.gradoop.temporal.io.impl.parquet.TemporalParquetProtobufTest.java">org/gradoop/temporal/io/impl/parquet/TemporalParquetProtobufTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
                   <a href="http://www.gradoop.org/checkstyle.html#org.gradoop.flink.algorithms.gelly.BaseGellyAlgorithm.java">org/gradoop/flink/algorithms/gelly/BaseGellyAlgorithm.java</a>
                 </td>
                 <td>
@@ -4596,6 +4652,20 @@ under the License.
               </tr>
                           <tr>
                 <td>
+                  <a href="http://www.gradoop.org/checkstyle.html#org.gradoop.temporal.io.impl.parquet.TemporalParquetTest.java">org/gradoop/temporal/io/impl/parquet/TemporalParquetTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
                   <a href="http://www.gradoop.org/checkstyle.html#org.gradoop.flink.io.impl.csv.indexed.IndexedCSVDataSinkTest.java">org/gradoop/flink/io/impl/csv/indexed/IndexedCSVDataSinkTest.java</a>
                 </td>
                 <td>
@@ -4862,6 +4932,20 @@ under the License.
               </tr>
                           <tr>
                 <td>
+                  <a href="http://www.gradoop.org/checkstyle.html#org.gradoop.temporal.model.impl.operators.metric.VertexCentricMinDegreeEvolutionTest.java">org/gradoop/temporal/model/impl/operators/metric/VertexCentricMinDegreeEvolutionTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
                   <a href="http://www.gradoop.org/checkstyle.html#org.gradoop.common.model.impl.id.GradoopIdTest.java">org/gradoop/common/model/impl/id/GradoopIdTest.java</a>
                 </td>
                 <td>
@@ -4975,6 +5059,20 @@ under the License.
                           <tr>
                 <td>
                   <a href="http://www.gradoop.org/checkstyle.html#org.gradoop.temporal.model.impl.operators.matching.single.cypher.testdata.isomorphism.IsomorphismAfterData.java">org/gradoop/temporal/model/impl/operators/matching/single/cypher/testdata/isomorphism/IsomorphismAfterData.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://www.gradoop.org/checkstyle.html#org.gradoop.temporal.model.impl.operators.metric.VertexCentricMaxDegreeEvolutionTest.java">org/gradoop/temporal/model/impl/operators/metric/VertexCentricMaxDegreeEvolutionTest.java</a>
                 </td>
                 <td>
                   0
